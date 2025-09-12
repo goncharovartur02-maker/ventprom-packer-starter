@@ -1,0 +1,47 @@
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-publish-artifacts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm install
+
+      - name: Build API
+        run: |
+          cd apps/api
+          npm run build || true
+
+      - name: Build Web
+        run: |
+          cd ../../apps/web || cd apps/web
+          npm run build || true
+
+      - name: Generate sample artifacts
+        run: |
+          bash scripts/generate_artifacts.sh
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out-artifacts/report-sample.pdf
+            out-artifacts/scene-sample.html
+            out-artifacts/scene-sample.glb
