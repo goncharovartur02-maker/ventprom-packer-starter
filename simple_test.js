@@ -50,3 +50,5 @@ console.log('4. Verify universal extraction works');
 console.log('\n✅ Universal Parser is ready to extract ALL data!');
 
 
+
+

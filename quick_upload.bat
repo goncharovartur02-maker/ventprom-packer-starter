@@ -66,3 +66,5 @@ echo    docker-compose up --build
 echo.
 pause
 
+
+

@@ -27,3 +27,5 @@ echo.
 
 docker-compose up --build --force-recreate --no-cache
 
+
+

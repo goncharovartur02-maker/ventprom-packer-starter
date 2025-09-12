@@ -208,3 +208,5 @@ If you encounter any issues:
 The universal parser is ready to extract ALL data from your files! 🎉
 
 
+
+

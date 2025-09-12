@@ -187,3 +187,5 @@ The Image Parser significantly expands the Ventprom Packer's capabilities by all
 The combination of table extraction and pattern recognition ensures that most well-formatted documents can be processed successfully, making the system more accessible to users who work with physical documents or photos.
 
 
+
+

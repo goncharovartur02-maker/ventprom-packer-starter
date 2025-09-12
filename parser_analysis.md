@@ -118,3 +118,5 @@ C1    | round| 200 | 0   | 1000 | 3   | 5.5
 The current parsers should be able to handle most of the example files, but there may be some edge cases and formatting issues that need to be addressed. The Excel parser is most robust, followed by the Text parser, with the PDF parser being most dependent on the specific format of the PDF content.
 
 
+
+

@@ -14,3 +14,5 @@ EXPOSE 3000 3001
 # Start both services
 CMD ["sh", "-c", "npm run dev & sleep 10 && npm run dev:api"]
 
+
+

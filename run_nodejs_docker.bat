@@ -23,3 +23,5 @@ echo.
 
 docker-compose -f docker-compose.nodejs.yml up --build --force-recreate
 
+
+
