@@ -1,0 +1,30 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package.json files first for better caching
+COPY package.json package-lock.json* ./
+COPY packages/core/package.json packages/core/
+COPY packages/parsers/package.json packages/parsers/
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+
+# Install dependencies for all workspaces
+RUN npm install --workspaces --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build packages in correct order (core first, then parsers)
+RUN cd packages/core && npm run build
+RUN cd packages/parsers && npm run build
+
+# Build applications
+RUN cd apps/api && npm run build
+RUN cd apps/web && npm run build
+
+# Expose ports
+EXPOSE 3000 3001
+
+# Start both services
+CMD ["sh", "-c", "cd apps/api && npm start & cd apps/web && npm start & wait"]
