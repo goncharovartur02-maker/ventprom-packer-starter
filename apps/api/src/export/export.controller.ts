@@ -2,7 +2,7 @@ import { Controller, Post, Body, Res } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ExportService } from './export.service';
-import { PackResult } from '@ventprom/core';
+import { PackResult } from '../../../../packages/core/src';
 
 @ApiTags('export')
 @Controller('export')
@@ -39,6 +39,7 @@ export class ExportController {
     res.send(html);
   }
 }
+
 
 
 

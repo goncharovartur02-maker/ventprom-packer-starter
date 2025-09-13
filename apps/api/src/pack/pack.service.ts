@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Vehicle, DuctItem, PackResult } from '@ventprom/core';
-import { Pack3D } from '@ventprom/core';
+import { Vehicle, DuctItem, PackResult, Pack3D } from '../../../../packages/core/src';
 
 @Injectable()
 export class PackService {
@@ -10,6 +9,7 @@ export class PackService {
     return this.packer.pack(vehicle, items);
   }
 }
+
 
 
 

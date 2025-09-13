@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8' # Obsolete in newer Docker Compose versions
 
 services:
   api:
@@ -36,6 +36,7 @@ services:
 networks:
   ventprom-network:
     driver: bridge
+
 
 
 

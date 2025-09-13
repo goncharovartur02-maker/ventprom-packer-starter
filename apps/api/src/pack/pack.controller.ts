@@ -1,7 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { PackService } from './pack.service';
-import { PackRequest, PackResult, Vehicle, DuctItem } from '@ventprom/core';
+import { PackRequest, PackResult, Vehicle, DuctItem } from '../../../../packages/core/src';
 
 @ApiTags('pack')
 @Controller('pack')
@@ -14,6 +14,7 @@ export class PackController {
     return this.packService.pack(request.vehicle, request.items);
   }
 }
+
 
 
 

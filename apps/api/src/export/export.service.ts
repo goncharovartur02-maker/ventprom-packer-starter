@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PackResult } from '@ventprom/core';
+import { PackResult } from '../../../../packages/core/src';
 
 @Injectable()
 export class ExportService {
@@ -24,6 +24,7 @@ export class ExportService {
     throw new Error('HTML export not implemented yet');
   }
 }
+
 
 
 

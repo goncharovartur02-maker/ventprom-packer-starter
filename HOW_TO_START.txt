@@ -1,0 +1,34 @@
+VENTPROM PACKER - HOW TO START
+================================
+
+QUICK START (Recommended):
+1. Double-click: START_HERE.bat
+2. Wait for dependencies to install and packages to build
+3. Open browser: http://localhost:3000
+
+DOCKER START:
+1. Double-click: docker-compose.workspace.yml
+2. Or run: docker-compose -f docker-compose.workspace.yml up --build app
+3. Open browser: http://localhost:3000
+
+MANUAL START:
+1. Open terminal in project folder
+2. Run: npm install --legacy-peer-deps
+3. Run: npm run build
+4. Run: npm run dev
+
+TROUBLESHOOTING:
+- If packages fail to build: Check Node.js installation
+- If Docker fails: Check Docker Desktop is running
+- If ports are busy: Close other applications using ports 3000/3001
+- If script closes immediately: Check Node.js and npm are installed
+
+FILES LOCATION:
+- Main script: START_HERE.bat
+- Docker: docker-compose.workspace.yml
+- Examples: examples/ folder
+
+SUPPORT:
+- Web Interface: http://localhost:3000
+- API Endpoint: http://localhost:3001
+- Upload files to test the universal parser

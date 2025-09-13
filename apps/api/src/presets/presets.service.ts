@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Vehicle } from '@ventprom/core';
+import { Vehicle } from '../../../../packages/core/src';
 
 @Injectable()
 export class PresetsService {
@@ -32,6 +32,7 @@ export class PresetsService {
     ];
   }
 }
+
 
 
 

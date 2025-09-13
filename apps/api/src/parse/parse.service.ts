@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DuctItem, UniversalItem } from '@ventprom/core';
-import { ExcelParser, PdfParser, TextParser, ImageParser } from '@ventprom/parsers';
+import { DuctItem, UniversalItem } from '../../../../packages/core/src';
+import { ExcelParser, PdfParser, TextParser, ImageParser } from '../../../../packages/parsers/src';
 
 @Injectable()
 export class ParseService {
