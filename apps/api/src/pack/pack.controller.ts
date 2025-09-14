@@ -13,6 +13,25 @@ export class PackController {
   async pack(@Body() request: PackRequest): Promise<PackResult> {
     return this.packService.pack(request.vehicle, request.items);
   }
+  
+  @Post('analyze-all')
+  @ApiResponse({ status: 200, description: 'All vehicles analyzed', type: Object })
+  async analyzeAllVehicles(@Body() request: { items: DuctItem[], vehicles: Vehicle[] }): Promise<{
+    recommendations: Array<{
+      vehicle: Vehicle;
+      result: PackResult;
+      efficiency: number;
+      cost: number;
+    }>;
+    bestOption: string;
+    multiVehicleOptions: Array<{
+      combination: Vehicle[];
+      totalCost: number;
+      description: string;
+    }>;
+  }> {
+    return this.packService.analyzeAllVehicles(request.items, request.vehicles);
+  }
 }
 
 

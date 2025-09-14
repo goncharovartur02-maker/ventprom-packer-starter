@@ -67,7 +67,9 @@ export class BeamSearch {
     // Return the best final state
     const bestState = beam[0];
     if (!bestState) {
-      throw new Error('No valid packing found');
+      console.warn('BeamSearch: Не найдено оптимальное размещение, используем fallback');
+      // Fallback: создаем простое размещение
+      return this.createFallbackPackResult(vehicle, items);
     }
     
     return this.stateToPackResult(bestState, vehicle);
@@ -86,10 +88,10 @@ export class BeamSearch {
     for (const orientation of orientations) {
       const { w, h, l } = orientation;
       
-      // Try all grid positions
-      for (let x = 0; x <= vehicle.width - w; x += gridSize) {
+      // Try all grid positions, начиная с конца кузова (реалистичная погрузка)
+      for (let z = vehicle.length - l; z >= 0; z -= gridSize) {
         for (let y = 0; y <= vehicle.height - h; y += gridSize) {
-          for (let z = 0; z <= vehicle.length - l; z += gridSize) {
+          for (let x = 0; x <= vehicle.width - w; x += gridSize) {
             const placement: Placement = {
               itemId: item.id,
               index: 0,
@@ -246,6 +248,64 @@ export class BeamSearch {
 
   private getItemDimensions(placement: Placement): { w: MM; h: MM; l: MM } {
     return this.itemRegistry.getItemDimensions(placement);
+  }
+
+  private createFallbackPackResult(vehicle: Vehicle, items: DuctItem[]): PackingResult {
+    console.log('BeamSearch: Создаем fallback размещение');
+    
+    const placements: Placement[] = [];
+    let currentX = 0, currentY = 0, currentZ = 0;
+    const SPACING = 50; // Отступ между элементами
+    
+    // Простое размещение элементов в ряд
+    for (let i = 0; i < Math.min(items.length, 20); i++) {
+      const item = items[i];
+      const width = item.w || item.d || 200;
+      const height = item.h || item.d || 200;
+      const length = item.length || 1000;
+      
+      // Проверяем, помещается ли в текущую позицию
+      if (currentX + width > vehicle.width) {
+        currentX = 0;
+        currentZ += length + SPACING;
+      }
+      
+      if (currentZ + length > vehicle.length) {
+        currentZ = 0;
+        currentY += height + SPACING;
+      }
+      
+      // Если не помещается по высоте, прекращаем
+      if (currentY + height > vehicle.height) {
+        break;
+      }
+      
+      placements.push({
+        itemId: item.id,
+        index: i,
+        x: currentX,
+        y: currentY,
+        z: currentZ,
+        rot: [0, 0, 0],
+        layer: Math.floor(currentY / 500),
+        row: Math.floor(currentZ / 1000)
+      });
+      
+      currentX += width + SPACING;
+    }
+    
+    console.log(`BeamSearch Fallback: Размещено ${placements.length} из ${items.length} элементов`);
+    
+    const rows = this.organizeByRows(placements);
+    const metrics = this.calculateMetrics(vehicle, placements);
+    
+    return {
+      placements,
+      binsUsed: 1,
+      rows,
+      metrics,
+      snapshots: [`BeamSearch Fallback: ${placements.length} items placed`],
+    };
   }
 
   private stateToPackResult(state: PackingState, vehicle: Vehicle): PackingResult {

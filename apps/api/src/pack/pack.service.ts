@@ -8,6 +8,53 @@ export class PackService {
   private pack3d = new Pack3D();
   private itemRegistry = new ItemRegistry();
   
+  async analyzeAllVehicles(items: DuctItem[], vehicles: Vehicle[]): Promise<{
+    results: Array<{ vehicle: Vehicle; result: PackResult; efficiency: number }>;
+    recommendations: string[];
+  }> {
+    console.log(`PackService: Анализ ${vehicles.length} транспортных средств для ${items.length} воздуховодов`);
+    
+    const results: Array<{ vehicle: Vehicle; result: PackResult; efficiency: number }> = [];
+    const recommendations: string[] = [];
+    
+    for (const vehicle of vehicles) {
+      try {
+        const result = await this.pack(vehicle, items);
+        const efficiency = this.calculateEfficiency(result, vehicle);
+        results.push({ vehicle, result, efficiency });
+      } catch (error) {
+        console.error(`Ошибка анализа для ${vehicle.name}:`, error);
+        recommendations.push(`❌ ${vehicle.name}: Не удалось разместить все воздуховоды`);
+      }
+    }
+    
+    // Сортируем по эффективности
+    results.sort((a, b) => b.efficiency - a.efficiency);
+    
+    // Генерируем рекомендации
+    if (results.length > 0) {
+      const best = results[0];
+      recommendations.push(`✅ Рекомендуется: ${best.vehicle.name} (эффективность: ${best.efficiency.toFixed(1)}%)`);
+      
+      if (results.length > 1) {
+        const second = results[1];
+        recommendations.push(`🔄 Альтернатива: ${second.vehicle.name} (эффективность: ${second.efficiency.toFixed(1)}%)`);
+      }
+    }
+    
+    return { results, recommendations };
+  }
+
+  private calculateEfficiency(result: PackResult, vehicle: Vehicle): number {
+    const totalVolume = result.placements.reduce((sum, p) => {
+      const item = result.items.find(i => i.id === p.itemId);
+      return sum + ((item?.w || 0) * (item?.h || 0) * (item?.length || 0) * (item?.qty || 0));
+    }, 0);
+    
+    const vehicleVolume = vehicle.width * vehicle.height * vehicle.length;
+    return (totalVolume / vehicleVolume) * 100;
+  }
+
   async pack(vehicle: Vehicle, items: DuctItem[]): Promise<PackResult> {
     console.log(`PackService: Многосценарный анализ для ${items.length} воздуховодов в ${vehicle.name}`);
     
@@ -193,24 +240,46 @@ export class PackService {
     return nested;
   }
 
-  // Проверка возможности вложения (матрешка)
+  // Проверка возможности вложения (матрешка) с учетом ПРАВИЛЬНЫХ фланцев
   private checkNesting(outer: DuctItem, inner: DuctItem): boolean {
-    const clearance = 10; // 10mm зазор
+    // Получаем размеры фланцев
+    const outerFlangeSize = this.getFlangeSize(outer.flangeType || 'TDC');
+    const innerFlangeSize = this.getFlangeSize(inner.flangeType || 'TDC');
     
-    // Круглый в круглый
-    if (outer.type === 'rect' && outer.w && outer.h && inner.type === 'rect' && inner.w && inner.h) {
-      return inner.w + clearance < outer.w && 
-             inner.h + clearance < outer.h && 
-             inner.length <= outer.length;
-    }
+    // Рассчитываем наружные размеры (внутреннее + фланец)
+    const outerExternalW = (outer.w || 0) + outerFlangeSize;
+    const outerExternalH = (outer.h || 0) + outerFlangeSize;
     
-    // Круглый в прямоугольный
-    if (outer.type === 'rect' && outer.w && outer.h && inner.type === 'round' && inner.d) {
-      const minDimension = Math.min(outer.w, outer.h);
-      return inner.d + clearance < minDimension && inner.length <= outer.length;
+    const innerExternalW = (inner.w || 0) + innerFlangeSize;
+    const innerExternalH = (inner.h || 0) + innerFlangeSize;
+    
+    // Проверяем, поместится ли внутренний воздуховод (наружные размеры) 
+    // внутри внутреннего сечения внешнего воздуховода
+    // Учитываем возможность поворота на 90°
+    const fitsWithoutRotation = innerExternalW <= (outer.w || 0) && innerExternalH <= (outer.h || 0);
+    const fitsWithRotation = innerExternalH <= (outer.w || 0) && innerExternalW <= (outer.h || 0);
+    const fitsLength = inner.length <= outer.length;
+    
+    const fitsWidth = fitsWithoutRotation || fitsWithRotation;
+    const fitsHeight = fitsLength; // Длина всегда должна помещаться
+    
+    if (fitsWidth && fitsHeight && fitsLength) {
+      console.log(`Матрешка: ${outer.w}×${outer.h} (внутр.) может содержать ${inner.w}×${inner.h} (внутр.)`);
+      console.log(`  Внешний наружный: ${outerExternalW}×${outerExternalH}, внутренний наружный: ${innerExternalW}×${innerExternalH}`);
+      return true;
     }
     
     return false;
+  }
+  
+  // Получить размер фланца в мм
+  private getFlangeSize(flangeType: string): number {
+    switch (flangeType) {
+      case 'TDC': return 43;
+      case 'SHINA_20': return 20;
+      case 'SHINA_30': return 30;
+      default: return 43; // По умолчанию TDC для проектов
+    }
   }
 
   // Расчет объема воздуховода

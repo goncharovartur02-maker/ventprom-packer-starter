@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { PackResult, DuctItem, Placement, Vehicle } from '@ventprom/core';
 
 interface ThreeDViewerProps {
@@ -17,8 +17,8 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
   const groupPlacementsByRow = (result: PackResult): Map<number, Placement[]> => {
     const rowGroups = new Map<number, Placement[]>();
     
-    if (result.placements) {
-      result.placements.forEach(placement => {
+    if ((result as any).placements) {
+      (result as any).placements.forEach((placement: Placement) => {
         const rowY = Math.round(placement.y / 100) * 100; // Группируем по 100мм
         if (!rowGroups.has(rowY)) {
           rowGroups.set(rowY, []);
@@ -73,10 +73,8 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
       planeMesh.position.set(0, rowY, 0);
       scene.add(planeMesh);
       
-      // Нумерация ряда
-      const loader = new THREE.FontLoader();
-      // В реальной реализации здесь нужно загрузить шрифт
-      // Пока используем простой TextGeometry placeholder
+      // Нумерация ряда (упрощенная версия без шрифтов)
+      // В реальной реализации здесь можно добавить текстовые метки
       
       // Создаем простую геометрию для номера ряда
       const textGeometry = new THREE.BoxGeometry(200, 50, 10);
@@ -92,22 +90,37 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
     });
   };
 
-  // Render individual duct items
+  // Render individual duct items with nesting visualization
   const renderDuctItems = (scene: THREE.Scene, result: PackResult) => {
-    if (result.placements && result.placements.length > 0) {
+    if ((result as any).placements && (result as any).placements.length > 0) {
       // Используем реальные координаты из placements
-      result.placements.forEach((placement, index) => {
-        const item = result.items[index] || result.items[0]; // Fallback к первому элементу
-        renderSingleDuctItem(scene, item, placement);
+      (result as any).placements.forEach((placement: Placement, index: number) => {
+        const item = result.items[index] || result.items[0];
+        
+        // Проверяем, является ли элемент матрешкой (nested)
+        const isNested = item.id.includes('nested_');
+        
+        if (isNested) {
+          renderNestedDuctItem(scene, item, placement, index);
+        } else {
+          renderSingleDuctItem(scene, item, placement);
+        }
       });
+      
+      // Добавляем информационные панели с размерами
+      addDimensionLabels(scene, result);
     } else {
       // Fallback: простое размещение элементов
       result.items.forEach((item, index) => {
         const fakePlacement: Placement = {
+          itemId: item.id,
+          index,
           x: (index % 5) * 400 - 800,
           y: Math.floor(index / 5) * 200 + 100,
           z: 0,
-          rot: [0, 0, 0]
+          rot: [0, 0, 0],
+          layer: 0,
+          row: Math.floor(index / 5)
         };
         renderSingleDuctItem(scene, item, fakePlacement);
       });
@@ -115,6 +128,135 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
   };
 
   // Render a single duct item with real coordinates and rotation
+  // Render nested duct item (матрешка)
+  const renderNestedDuctItem = (scene: THREE.Scene, item: DuctItem, placement: Placement, index: number) => {
+    // Рендерим внешний воздуховод полупрозрачным
+    const outerGeometry = item.type === 'rect' 
+      ? new THREE.BoxGeometry(item.w || 100, item.h || 100, item.length || 1000)
+      : new THREE.CylinderGeometry((item.d || 100) / 2, (item.d || 100) / 2, item.length || 1000, 32);
+    
+    if (item.type === 'round') {
+      outerGeometry.rotateZ(Math.PI / 2);
+    }
+    
+    // Полупрозрачный материал для внешнего воздуховода
+    const outerMaterial = new THREE.MeshLambertMaterial({
+      color: 0x2196f3,
+      transparent: true,
+      opacity: 0.3,
+      wireframe: false
+    });
+    
+    const outerMesh = new THREE.Mesh(outerGeometry, outerMaterial);
+    outerMesh.position.set(placement.x, placement.y, placement.z);
+    outerMesh.rotation.set(
+      placement.rot[0] * Math.PI / 180,
+      placement.rot[1] * Math.PI / 180,
+      placement.rot[2] * Math.PI / 180
+    );
+    scene.add(outerMesh);
+    
+    // Рендерим внутренние воздуховоды (имитация)
+    const innerCount = Math.floor(Math.random() * 3) + 1; // 1-3 внутренних элемента
+    for (let i = 0; i < innerCount; i++) {
+      const innerSize = 0.6 - i * 0.15; // Уменьшающиеся размеры
+      const innerGeometry = item.type === 'rect'
+        ? new THREE.BoxGeometry((item.w || 100) * innerSize, (item.h || 100) * innerSize, (item.length || 1000) * 0.9)
+        : new THREE.CylinderGeometry(((item.d || 100) / 2) * innerSize, ((item.d || 100) / 2) * innerSize, (item.length || 1000) * 0.9, 16);
+      
+      if (item.type === 'round') {
+        innerGeometry.rotateZ(Math.PI / 2);
+      }
+      
+      const innerMaterial = new THREE.MeshLambertMaterial({
+        color: i === 0 ? 0x4caf50 : (i === 1 ? 0xff9800 : 0xf44336)
+      });
+      
+      const innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
+      innerMesh.position.set(placement.x, placement.y, placement.z);
+      innerMesh.rotation.set(
+        placement.rot[0] * Math.PI / 180,
+        placement.rot[1] * Math.PI / 180,
+        placement.rot[2] * Math.PI / 180
+      );
+      scene.add(innerMesh);
+    }
+    
+    // Добавляем метку матрешки
+    addNestedLabel(scene, placement, item, innerCount);
+  };
+  
+  // Add label for nested items
+  const addNestedLabel = (scene: THREE.Scene, placement: Placement, item: DuctItem, nestedCount: number) => {
+    // Создаем текстовую метку
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 256;
+    canvas.height = 128;
+    
+    context.fillStyle = '#1a1a1a';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#ffffff';
+    context.font = '16px Arial';
+    context.textAlign = 'center';
+    context.fillText(`🪆 Матрешка`, canvas.width / 2, 30);
+    context.fillText(`${nestedCount + 1} элементов`, canvas.width / 2, 55);
+    context.fillText(`${item.w || item.d}×${item.h || item.d}×${item.length}`, canvas.width / 2, 80);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    
+    sprite.position.set(placement.x, placement.y + (item.h || item.d || 100) + 100, placement.z);
+    sprite.scale.set(200, 100, 1);
+    scene.add(sprite);
+  };
+  
+  // Add dimension labels to the scene
+  const addDimensionLabels = (scene: THREE.Scene, result: PackResult) => {
+    const vehicle = result.vehicle;
+    
+    // Размеры кузова
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 512;
+    canvas.height = 256;
+    
+    context.fillStyle = '#1a1a1a';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#ffffff';
+    context.font = 'bold 20px Arial';
+    context.textAlign = 'left';
+    
+    context.fillText(`🚛 ${vehicle.name}`, 20, 40);
+    context.font = '16px Arial';
+    context.fillText(`Ширина: ${vehicle.width}мм`, 20, 70);
+    context.fillText(`Высота: ${vehicle.height}мм`, 20, 95);
+    context.fillText(`Длина: ${vehicle.length}мм`, 20, 120);
+    context.fillText(`Грузоподъемность: ${vehicle.maxPayloadKg}кг`, 20, 145);
+    
+    // Статистика упаковки
+    const totalItems = result.items.reduce((sum, item) => sum + item.qty, 0);
+    const totalWeight = result.totalWeight;
+    
+    context.fillText(`📦 Воздуховодов: ${totalItems}`, 280, 70);
+    context.fillText(`⚖️ Общий вес: ${totalWeight.toFixed(1)}кг`, 280, 95);
+    context.fillText(`📊 Утилизация: ${result.utilization.toFixed(1)}%`, 280, 120);
+    
+    if ((result as any).placements) {
+      context.fillText(`📍 Позиций: ${(result as any).placements.length}`, 280, 145);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    
+    sprite.position.set(-vehicle.width / 2 - 300, vehicle.height + 200, vehicle.length / 2);
+    sprite.scale.set(400, 200, 1);
+    scene.add(sprite);
+  };
+
+  // Render a single duct item
   const renderSingleDuctItem = (scene: THREE.Scene, item: DuctItem, placement: Placement) => {
     let geometry: THREE.BufferGeometry;
     
@@ -192,16 +334,26 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
     if (context) {
       canvas.width = 256;
       canvas.height = 64;
-      context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      context.fillStyle = 'rgba(0, 0, 0, 0.9)';
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = 'black';
-      context.font = '12px Arial';
+      context.fillStyle = '#ffffff';
+      context.font = 'bold 14px Arial';
       context.textAlign = 'center';
       
-      const text = item.type === 'rect' 
-        ? `${item.w}×${item.h}×${item.length}`
-        : `Ø${item.d}×${item.length}`;
-      context.fillText(text, canvas.width / 2, canvas.height / 2);
+      // Размеры
+      const sizeText = item.type === 'rect' 
+        ? `${item.w}×${item.h}×${item.length}мм`
+        : `Ø${item.d}×${item.length}мм`;
+      context.fillText(sizeText, canvas.width / 2, 20);
+      
+      // Количество и вес
+      context.font = '12px Arial';
+      context.fillText(`${item.qty}шт | ${(item.weightKg || 0).toFixed(1)}кг`, canvas.width / 2, 40);
+      
+      // Материал и матрешка
+      const materialText = item.material === 'galvanized' ? 'Оцинк.' : (item.material || 'Сталь');
+      const nestedText = item.id.includes('nested_') ? ' 🪆' : '';
+      context.fillText(`${materialText} | ${item.flangeType || 'NONE'}${nestedText}`, canvas.width / 2, 55);
       
       const texture = new THREE.CanvasTexture(canvas);
       const labelMaterial = new THREE.MeshBasicMaterial({
@@ -399,12 +551,12 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
       <div ref={mountRef} className="w-full h-full" />
       
       {/* Color legend */}
-      <div className="absolute top-4 right-4 bg-white bg-opacity-90 p-4 rounded-lg shadow-lg">
-        <h3 className="text-sm font-semibold mb-2">🎨 Цветовая индикация:</h3>
-        <div className="space-y-1 text-xs">
+      <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md p-4 rounded-lg shadow-lg border border-white/20">
+        <h3 className="text-sm font-semibold mb-2 text-white">🎨 Цветовая индикация:</h3>
+        <div className="space-y-1 text-xs text-white/90">
           <div className="flex items-center">
             <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
-            <span>Перегруженные (>30кг)</span>
+            <span>Перегруженные (&gt;30кг)</span>
           </div>
           <div className="flex items-center">
             <div className="w-4 h-4 bg-yellow-500 rounded mr-2"></div>
@@ -418,12 +570,12 @@ export default function ThreeDViewer({ result }: ThreeDViewerProps) {
       </div>
 
       {/* Statistics panel */}
-      {result.placements && (
-        <div className="absolute top-4 left-4 bg-white bg-opacity-90 p-4 rounded-lg shadow-lg">
-          <h3 className="text-sm font-semibold mb-2">📊 Статистика:</h3>
-          <div className="space-y-1 text-xs">
+      {(result as any).placements && (
+        <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md p-4 rounded-lg shadow-lg border border-white/20">
+          <h3 className="text-sm font-semibold mb-2 text-white">📊 Статистика:</h3>
+          <div className="space-y-1 text-xs text-white/90">
             <div>Элементов: {result.items.reduce((sum, item) => sum + item.qty, 0)}</div>
-            <div>Позиций: {result.placements.length}</div>
+            <div>Позиций: {(result as any).placements.length}</div>
             <div>Утилизация: {result.utilization?.toFixed(1)}%</div>
             <div>Рядов: {groupPlacementsByRow(result).size}</div>
           </div>

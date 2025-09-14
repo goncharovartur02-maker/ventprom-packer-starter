@@ -270,7 +270,7 @@ export class UniversalParser {
       if (columnMap.radius) item.dimensions.radius = this.parseNumber(this.getCellValue(columns, columnMap.radius)) || undefined;
 
       // Validate that we have at least some useful data
-      const hasDimensions = Object.values(item.dimensions).some(dim => dim && dim > 0);
+      const hasDimensions = Object.values(item.dimensions).some(dim => typeof dim === 'number' && dim > 0);
       if (!hasDimensions) {
         return null;
       }

@@ -258,8 +258,8 @@ export class GreedyFFD {
       const existingW = 100, existingH = 100, existingL = 1000;
       
       if (collide(
-        placement.x, placement.y, placement.z, w, h, l,
-        existing.x, existing.y, existing.z, existingW, existingH, existingL
+        placement, w, h, l,
+        existing, existingW, existingH, existingL
       )) {
         return true;
       }

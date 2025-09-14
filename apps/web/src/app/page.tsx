@@ -10,7 +10,7 @@ import type { UniversalItem, Vehicle, PackResult } from '@ventprom/core';
 
 export default function Home() {
   const [items, setItems] = useState<UniversalItem[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicles, setSelectedVehicles] = useState<Vehicle[]>([]);
   const [selectedScenario, setSelectedScenario] = useState<string>('balanced');
   const [packResult, setPackResult] = useState<PackResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,8 +46,8 @@ export default function Home() {
   };
 
   const handlePack = async () => {
-    if (!selectedVehicle || items.length === 0) {
-      setError('Please select a vehicle and upload items first');
+    if (selectedVehicles.length === 0 || items.length === 0) {
+      setError('Please select at least one vehicle and upload items first');
       return;
     }
 
@@ -62,7 +62,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          vehicle: selectedVehicle,
+          vehicle: selectedVehicles[0], // Пока используем первую выбранную машину
           items: items,
         }),
       });
@@ -236,7 +236,7 @@ export default function Home() {
                 <div className="mt-6 p-4 bg-green-500/20 rounded-2xl border border-green-400/30">
                   <div className="flex items-center text-green-200">
                     <span className="text-2xl mr-3">✅</span>
-                    Загружено {items.length} воздуховодов
+                    Загружено {items.reduce((sum, item) => sum + (item.qty || 1), 0)} воздуховодов
                   </div>
                 </div>
               )}
@@ -248,8 +248,8 @@ export default function Home() {
                 🚛 Выбрать транспорт
               </h2>
               <VehicleSelector
-                onSelect={setSelectedVehicle}
-                selected={selectedVehicle}
+                onSelect={setSelectedVehicles}
+                selected={selectedVehicles}
               />
             </div>
 
@@ -266,7 +266,7 @@ export default function Home() {
               <div className="space-y-4">
                 <button
                   onClick={handlePack}
-                  disabled={!selectedVehicle || items.length === 0 || loading}
+                  disabled={selectedVehicles.length === 0 || items.length === 0 || loading}
                   className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 disabled:scale-100 disabled:opacity-50 flex items-center justify-center"
                 >
                   {loading ? (

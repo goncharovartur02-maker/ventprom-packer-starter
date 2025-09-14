@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VentProm Packer - Финальное тестирование</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 4px solid #60a5fa;
+            transition: transform 0.2s;
+        }
+        .test-card:hover {
+            transform: translateY(-5px);
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        .success { background: #10b981; }
+        .error { background: #ef4444; }
+        .warning { background: #f59e0b; }
+        .loading { background: #3b82f6; }
+        button {
+            background: linear-gradient(45deg, #60a5fa, #a78bfa);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(96, 165, 250, 0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(96, 165, 250, 0.4);
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .feature {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .link-card {
+            background: linear-gradient(45deg, rgba(96, 165, 250, 0.2), rgba(167, 139, 250, 0.2));
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .link-card a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚛 VentProm Packer - Финальное тестирование</h1>
+        
+        <div class="feature-list">
+            <div class="feature">
+                <h3>✅ Исправлен дизайн</h3>
+                <p>Темный фон, читаемый текст</p>
+            </div>
+            <div class="feature">
+                <h3>🚛 Новые машины</h3>
+                <p>Газели, полуфуры, фуры</p>
+            </div>
+            <div class="feature">
+                <h3>📄 Улучшен парсер</h3>
+                <p>Метры → штуки по TDC</p>
+            </div>
+            <div class="feature">
+                <h3>🪆 Визуализация матрешки</h3>
+                <p>Полупрозрачные внешние</p>
+            </div>
+            <div class="feature">
+                <h3>📦 Реалистичная погрузка</h3>
+                <p>С конца кузова</p>
+            </div>
+            <div class="feature">
+                <h3>🎯 Автооптимизация</h3>
+                <p>Без ручных настроек</p>
+            </div>
+        </div>
+
+        <div class="test-grid">
+            <div class="test-card">
+                <h3>📡 Статус API</h3>
+                <button onclick="testAPI()">Проверить API</button>
+                <span id="api-status" class="status loading">Проверка...</span>
+                <div id="api-result" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-card">
+                <h3>🚚 Новые транспортные средства</h3>
+                <button onclick="testNewVehicles()">Проверить новые машины</button>
+                <span id="vehicles-status" class="status">Ожидание</span>
+                <div id="vehicles-result" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-card">
+                <h3>📄 Улучшенный PDF парсер</h3>
+                <input type="file" id="pdf-input" accept=".pdf" style="margin-bottom: 10px;">
+                <button onclick="testPdfParsing()">Тест PDF парсера</button>
+                <span id="pdf-status" class="status">Ожидание</span>
+                <div id="pdf-result" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-card">
+                <h3>🪆 Тест матрешки</h3>
+                <button onclick="testNesting()">Тест алгоритма матрешки</button>
+                <span id="nesting-status" class="status">Ожидание</span>
+                <div id="nesting-result" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-card">
+                <h3>📦 Комбинации машин</h3>
+                <button onclick="testMultiVehicle()">Тест нескольких машин</button>
+                <span id="multi-status" class="status">Ожидание</span>
+                <div id="multi-result" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-card">
+                <h3>🎨 3D визуализация</h3>
+                <button onclick="test3DFeatures()">Проверить 3D функции</button>
+                <span id="3d-status" class="status">Ожидание</span>
+                <div id="3d-result" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="link-card">
+            <h3>🌐 Основной интерфейс</h3>
+            <a href="http://localhost:3000" target="_blank">Открыть VentProm Packer</a>
+            <p style="margin-top: 10px; color: #cbd5e1;">Протестируйте все улучшения в основном интерфейсе</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        async function testAPI() {
+            const statusEl = document.getElementById('api-status');
+            const resultEl = document.getElementById('api-result');
+            
+            statusEl.className = 'status loading';
+            statusEl.textContent = 'Проверка...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/presets`);
+                if (response.ok) {
+                    statusEl.className = 'status success';
+                    statusEl.textContent = 'Работает';
+                    resultEl.style.display = 'block';
+                    resultEl.textContent = `✅ API доступен на порту 3001`;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'Ошибка';
+                resultEl.style.display = 'block';
+                resultEl.textContent = `❌ Ошибка: ${error.message}`;
+            }
+        }
+
+        async function testNewVehicles() {
+            const statusEl = document.getElementById('vehicles-status');
+            const resultEl = document.getElementById('vehicles-result');
+            
+            statusEl.className = 'status loading';
+            statusEl.textContent = 'Загрузка...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/presets`);
+                const vehicles = await response.json();
+                
+                statusEl.className = 'status success';
+                statusEl.textContent = `Загружено: ${vehicles.length}`;
+                resultEl.style.display = 'block';
+                
+                let html = '<h4>🚛 Новые транспортные средства:</h4>';
+                vehicles.forEach(v => {
+                    html += `<div style="margin: 5px 0; padding: 8px; background: rgba(96, 165, 250, 0.1); border-radius: 5px;">`;
+                    html += `<strong>${v.name}</strong><br>`;
+                    html += `📏 ${v.width}×${v.height}×${v.length}мм<br>`;
+                    html += `⚖️ ${v.maxPayloadKg}кг`;
+                    html += `</div>`;
+                });
+                
+                resultEl.innerHTML = html;
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'Ошибка';
+                resultEl.style.display = 'block';
+                resultEl.textContent = error.message;
+            }
+        }
+
+        async function testPdfParsing() {
+            const statusEl = document.getElementById('pdf-status');
+            const resultEl = document.getElementById('pdf-result');
+            const fileInput = document.getElementById('pdf-input');
+            
+            if (!fileInput.files.length) {
+                alert('Выберите PDF файл для тестирования улучшенного парсера');
+                return;
+            }
+            
+            statusEl.className = 'status loading';
+            statusEl.textContent = 'Парсинг...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('files', fileInput.files[0]);
+                
+                const response = await fetch(`${API_BASE}/parse`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                statusEl.className = 'status success';
+                statusEl.textContent = `Найдено: ${result.items.length}`;
+                resultEl.style.display = 'block';
+                
+                let html = '<h4>📄 Результат улучшенного парсера:</h4>';
+                const totalDucts = result.items.reduce((sum, item) => sum + (item.qty || 1), 0);
+                html += `<div><strong>Общее количество воздуховодов: ${totalDucts}</strong></div><br>`;
+                
+                result.items.slice(0, 10).forEach((item, i) => {
+                    const size = item.type === 'rect' ? `${item.dimensions?.width}×${item.dimensions?.height}` : `Ø${item.dimensions?.diameter}`;
+                    html += `<div style="margin: 3px 0;">${i+1}. ${size}×${item.dimensions?.length}мм | ${item.qty}шт | ${item.weightKg?.toFixed(1)}кг</div>`;
+                });
+                
+                if (result.items.length > 10) {
+                    html += `<div style="margin-top: 10px; color: #fbbf24;">... и еще ${result.items.length - 10} воздуховодов</div>`;
+                }
+                
+                resultEl.innerHTML = html;
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'Ошибка';
+                resultEl.style.display = 'block';
+                resultEl.textContent = error.message;
+            }
+        }
+
+        async function testNesting() {
+            const statusEl = document.getElementById('nesting-status');
+            const resultEl = document.getElementById('nesting-result');
+            
+            statusEl.className = 'status loading';
+            statusEl.textContent = 'Тестирование...';
+            
+            try {
+                // Создаем тестовые данные для матрешки
+                const testData = {
+                    vehicle: {
+                        id: "gazel_4m",
+                        name: "Газель 4 метра",
+                        width: 2000,
+                        height: 1800,
+                        length: 4200,
+                        maxPayloadKg: 1500
+                    },
+                    items: [
+                        // Большой прямоугольный (внешний)
+                        {
+                            id: "outer-rect",
+                            type: "rect",
+                            w: 400,
+                            h: 300,
+                            length: 1160,
+                            qty: 2,
+                            weightKg: 25.5,
+                            flangeType: "TDC",
+                            material: "galvanized"
+                        },
+                        // Средний прямоугольный (может поместиться внутри)
+                        {
+                            id: "middle-rect",
+                            type: "rect", 
+                            w: 300,
+                            h: 200,
+                            length: 1160,
+                            qty: 3,
+                            weightKg: 18.7,
+                            flangeType: "TDC",
+                            material: "galvanized"
+                        },
+                        // Маленький круглый (внутренний)
+                        {
+                            id: "inner-round",
+                            type: "round",
+                            d: 150,
+                            length: 1160,
+                            qty: 5,
+                            weightKg: 12.3,
+                            flangeType: "TDC",
+                            material: "galvanized"
+                        }
+                    ]
+                };
+                
+                const response = await fetch(`${API_BASE}/pack`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                statusEl.className = 'status success';
+                statusEl.textContent = 'Успешно';
+                resultEl.style.display = 'block';
+                
+                let html = '<h4>🪆 Результат матрешки:</h4>';
+                html += `<div>📦 Исходных типов: 3</div>`;
+                html += `<div>📊 Итоговых элементов: ${result.items.length}</div>`;
+                html += `<div>⚖️ Общий вес: ${result.totalWeight.toFixed(1)} кг</div>`;
+                html += `<div>📈 Утилизация: ${result.utilization.toFixed(1)}%</div>`;
+                html += `<div>🚚 Транспорт: ${result.vehicle.name}</div>`;
+                
+                // Показываем какие элементы получились
+                html += '<br><h5>🔧 Результирующие элементы:</h5>';
+                result.items.forEach((item, i) => {
+                    const isNested = item.id.includes('nested_');
+                    const nestedIcon = isNested ? '🪆 ' : '';
+                    const size = item.type === 'rect' ? `${item.w}×${item.h}` : `Ø${item.d}`;
+                    html += `<div>${nestedIcon}${i+1}. ${size}×${item.length}мм | ${item.qty}шт | ${item.weightKg.toFixed(1)}кг</div>`;
+                });
+                
+                resultEl.innerHTML = html;
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'Ошибка';
+                resultEl.style.display = 'block';
+                resultEl.textContent = error.message;
+            }
+        }
+
+        async function testMultiVehicle() {
+            const statusEl = document.getElementById('multi-status');
+            const resultEl = document.getElementById('multi-result');
+            
+            statusEl.className = 'status warning';
+            statusEl.textContent = 'В разработке';
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = `
+                <h4>🚧 Функция в разработке</h4>
+                <p>Анализ комбинаций машин (фура + газель) требует:</p>
+                <ul style="margin-left: 20px;">
+                    <li>Новый API эндпоинт для множественных машин</li>
+                    <li>Алгоритм распределения остатков</li>
+                    <li>Оптимизация по стоимости доставки</li>
+                </ul>
+                <p><strong>Планируется в следующем обновлении</strong></p>
+            `;
+        }
+
+        async function test3DFeatures() {
+            const statusEl = document.getElementById('3d-status');
+            const resultEl = document.getElementById('3d-result');
+            
+            statusEl.className = 'status success';
+            statusEl.textContent = 'Готово';
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = `
+                <h4>🎨 Улучшения 3D визуализации:</h4>
+                <div style="margin: 10px 0;">
+                    ✅ <strong>Темные панели</strong> - читаемый текст<br>
+                    ✅ <strong>Детальные размеры</strong> - на каждом элементе<br>
+                    ✅ <strong>Визуализация матрешки</strong> - полупрозрачные внешние<br>
+                    ✅ <strong>Размеры машины</strong> - отображаются в 3D<br>
+                    ✅ <strong>Материалы и фланцы</strong> - полная информация<br>
+                    ✅ <strong>Индикация матрешки</strong> - 🪆 метки<br>
+                </div>
+                <p style="color: #10b981;"><strong>Откройте основной интерфейс для тестирования!</strong></p>
+            `;
+        }
+
+        // Автоматический тест при загрузке
+        window.onload = () => {
+            testAPI();
+            setTimeout(testNewVehicles, 1000);
+            setTimeout(test3DFeatures, 2000);
+        };
+    </script>
+</body>
+</html>

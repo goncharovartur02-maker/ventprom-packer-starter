@@ -154,7 +154,11 @@ export class LayerRules {
     const maxPressure = material === 'galvanized' ? 500 : 
                        material === 'stainless' ? 700 : 400;
     
-    return (baseArea / 1000000) * maxPressure; // Переводим мм² в м²
+    // Исправляем расчет: добавляем минимальный вес + расчет по площади
+    const weightByArea = (baseArea / 1000000) * maxPressure; // Переводим мм² в м²
+    const minWeight = 100; // Минимум 100кг для любого воздуховода
+    
+    return Math.max(weightByArea, minWeight);
   }
 
   // Распределение веса по осям транспорта

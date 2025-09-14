@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import type { Vehicle } from '@ventprom/core';
 
 interface VehicleSelectorProps {
-  onSelect: (vehicle: Vehicle) => void;
-  selected: Vehicle | null;
+  onSelect: (vehicles: Vehicle[]) => void;
+  selected: Vehicle[];
 }
 
 export default function VehicleSelector({ onSelect, selected }: VehicleSelectorProps) {
@@ -45,44 +45,74 @@ export default function VehicleSelector({ onSelect, selected }: VehicleSelectorP
     );
   }
 
+  const handleVehicleToggle = (vehicle: Vehicle) => {
+    const isSelected = selected.some(v => v.id === vehicle.id);
+    let newSelected: Vehicle[];
+    
+    if (isSelected) {
+      newSelected = selected.filter(v => v.id !== vehicle.id);
+    } else {
+      newSelected = [...selected, vehicle];
+    }
+    
+    onSelect(newSelected);
+  };
+
   return (
     <div className="space-y-3">
-      {vehicles.map((vehicle) => (
-        <div
-          key={vehicle.id}
-          className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-            selected?.id === vehicle.id
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:border-gray-300'
-          }`}
-          onClick={() => onSelect(vehicle)}
-        >
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-medium text-gray-900">{vehicle.name}</h3>
-              <p className="text-sm text-gray-600">
-                {vehicle.width} × {vehicle.height} × {vehicle.length} mm
-              </p>
-              {vehicle.maxPayloadKg && (
-                <p className="text-sm text-gray-600">
-                  Max payload: {vehicle.maxPayloadKg} kg
+      <div className="text-white/80 text-sm mb-4">
+        Выберите транспортные средства для анализа (можно несколько):
+      </div>
+      {vehicles.map((vehicle) => {
+        const isSelected = selected.some(v => v.id === vehicle.id);
+        return (
+          <div
+            key={vehicle.id}
+            className={`p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+              isSelected
+                ? 'bg-blue-500/30 border-2 border-blue-400 shadow-lg'
+                : 'bg-white/10 border-2 border-white/20 hover:bg-white/15 hover:border-white/30'
+            }`}
+            onClick={() => handleVehicleToggle(vehicle)}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-medium text-white text-lg">{vehicle.name}</h3>
+                <p className="text-white/70 text-sm">
+                  {vehicle.width} × {vehicle.height} × {vehicle.length} мм
                 </p>
-              )}
-            </div>
-            {selected?.id === vehicle.id && (
-              <div className="text-blue-500">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                {vehicle.maxPayloadKg && (
+                  <p className="text-white/70 text-sm">
+                    Грузоподъемность: {vehicle.maxPayloadKg} кг
+                  </p>
+                )}
               </div>
-            )}
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                isSelected 
+                  ? 'bg-blue-500 border-blue-400' 
+                  : 'border-white/40'
+              }`}>
+                {isSelected && (
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {selected.length > 0 && (
+        <div className="mt-4 p-3 bg-green-500/20 rounded-xl border border-green-400/30">
+          <div className="text-green-200 text-sm">
+            ✅ Выбрано машин для анализа: {selected.length}
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }

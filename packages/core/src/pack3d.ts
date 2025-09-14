@@ -451,7 +451,7 @@ export class Pack3D {
       
       const recommendation = this.generateRecommendation(scenarios, vehicle, items);
       
-      console.log(`Pack3D: Лучший сценарий: ${bestScenario.name} (score: ${bestScenario.score.toFixed(1)})`);
+      console.log(`Pack3D: Лучший сценарий: ${bestScenario.config.name} (score: ${bestScenario.metrics.stabilityScore.toFixed(1)})`);
       
       return {
         bestScenario,
@@ -467,16 +467,23 @@ export class Pack3D {
       
       return {
         bestScenario: {
-          id: 'fallback',
-          name: 'Стандартная упаковка',
-          description: 'Fallback к стандартному алгоритму',
+          config: {
+            name: 'Стандартная упаковка',
+            description: 'Fallback к стандартному алгоритму',
+            priority: 'balanced',
+            weights: {
+              vehicleCount: 1,
+              weightBalance: 1,
+              centerOfGravity: 1,
+              fragileProtection: 1,
+              unloadingOrder: 1
+            }
+          },
           packResult: fallbackResult,
           metrics: this.createFallbackMetrics(fallbackResult, vehicle, items),
-          priority: 'efficiency',
-          score: 75,
           warnings: ['Многосценарная оптимизация недоступна'],
           recommendations: ['Используется стандартный алгоритм упаковки']
-        } as ScenarioResult,
+        },
         allScenarios: [],
         recommendation: 'Использована стандартная упаковка из-за ошибки многосценарного анализа'
       };
@@ -495,15 +502,15 @@ export class Pack3D {
     recommendation += `• Общий вес: ${totalWeight.toFixed(1)} кг\n`;
     recommendation += `• Транспорт: ${vehicle.name}\n\n`;
     
-    recommendation += `🏆 Лучший сценарий: ${best.name}\n`;
-    recommendation += `📝 ${best.description}\n`;
-    recommendation += `⭐ Оценка: ${best.score.toFixed(1)}/100\n\n`;
+    recommendation += `🏆 Лучший сценарий: ${best.config.name}\n`;
+    recommendation += `📝 ${best.config.description}\n`;
+    recommendation += `⭐ Оценка: ${best.metrics.stabilityScore.toFixed(1)}/100\n\n`;
     
     recommendation += `📈 Ключевые метрики:\n`;
-    recommendation += `• Утилизация пространства: ${best.metrics.spaceUtilization.toFixed(1)}%\n`;
-    recommendation += `• Безопасность: ${best.metrics.safetyScore.toFixed(1)}/100\n`;
-    recommendation += `• Время разгрузки: ${best.metrics.unloadingTime.toFixed(0)} мин\n`;
-    recommendation += `• Соблюдение фланцев: ${best.metrics.flangeCompliance.toFixed(1)}%\n\n`;
+    recommendation += `• Утилизация пространства: ${best.metrics.avgUtilization.toFixed(1)}%\n`;
+    recommendation += `• Безопасность: ${best.metrics.stabilityScore.toFixed(1)}/100\n`;
+    recommendation += `• Время разгрузки: ${best.metrics.unloadingEfficiency.toFixed(0)} мин\n`;
+    recommendation += `• Защита хрупких: ${best.metrics.fragileProtectionScore.toFixed(1)}%\n\n`;
     
     if (best.warnings.length > 0) {
       recommendation += `⚠️ Предупреждения:\n`;
@@ -518,31 +525,31 @@ export class Pack3D {
     if (scenarios.length > 1) {
       recommendation += `\n🔄 Альтернативы:\n`;
       scenarios.slice(1, 3).forEach((scenario, index) => {
-        recommendation += `${index + 2}. ${scenario.name} (${scenario.score.toFixed(1)})\n`;
+        recommendation += `${index + 2}. ${scenario.config.name} (${scenario.metrics.stabilityScore.toFixed(1)})\n`;
       });
     }
     
     // Специальные рекомендации в зависимости от приоритета
-    switch (best.priority) {
+    switch (best.config.priority) {
       case 'safety':
         recommendation += `\n🛡️ Приоритет: БЕЗОПАСНОСТЬ\n`;
         recommendation += `• Рекомендуется для дальних перевозок\n`;
         recommendation += `• Минимальный риск повреждений\n`;
         break;
         
-      case 'efficiency':
-        recommendation += `\n💰 Приоритет: ЭКОНОМИЧНОСТЬ\n`;
+      case 'vehicles':
+        recommendation += `\n🚚 Приоритет: МИНИМУМ МАШИН\n`;
         recommendation += `• Минимальные транспортные расходы\n`;
         recommendation += `• Максимальная загрузка транспорта\n`;
         break;
         
-      case 'speed':
+      case 'unloading':
         recommendation += `\n⚡ Приоритет: СКОРОСТЬ\n`;
         recommendation += `• Быстрая разгрузка на объекте\n`;
         recommendation += `• Оптимизировано для срочных поставок\n`;
         break;
         
-      case 'protection':
+      case 'fragile':
         recommendation += `\n🛡️ Приоритет: ЗАЩИТА\n`;
         recommendation += `• Максимальная защита хрупких элементов\n`;
         recommendation += `• Рекомендуется для дорогих материалов\n`;
@@ -594,8 +601,8 @@ export class Pack3D {
     
     // Оценка приоритетов
     const priorityScores = {
-      safety: this.calculateSafetyPriority(totalWeight, vehicle.maxPayloadKg, heavyItems, itemCount),
-      efficiency: this.calculateEfficiencyPriority(totalWeight, vehicle.maxPayloadKg, itemCount),
+      safety: this.calculateSafetyPriority(totalWeight, vehicle.maxPayloadKg || 3000, heavyItems, itemCount),
+      efficiency: this.calculateEfficiencyPriority(totalWeight, vehicle.maxPayloadKg || 3000, itemCount),
       speed: this.calculateSpeedPriority(itemCount, avgWeight),
       protection: this.calculateProtectionPriority(fragileItems, itemCount)
     };
@@ -785,7 +792,7 @@ export class Pack3D {
     let safetyScore = 100;
     
     // Проверка перегрузки
-    if (totalWeight > vehicle.maxPayloadKg * 0.9) {
+    if (totalWeight > (vehicle.maxPayloadKg || 3000) * 0.9) {
       safetyScore -= 30;
       criticalIssues.push('Превышение допустимой нагрузки');
       quickRecommendations.push('Уменьшить количество груза');

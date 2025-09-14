@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PackResult, Vehicle, DuctItem } from '../types';
-import * as PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
 
 interface PlacementWithItem {
   itemId: string;
@@ -176,7 +176,7 @@ export class ExportService {
 
     currentY += 35;
 
-    vehicleGroups.forEach(([vehicleId, data], index) => {
+    Array.from(vehicleGroups.entries()).forEach(([vehicleId, data], index) => {
       const vehicle = data.vehicle;
       const weight = this.calculateVehicleWeight(data.placements);
       const utilization = vehicle.maxPayloadKg ? (weight / vehicle.maxPayloadKg) * 100 : 0;
