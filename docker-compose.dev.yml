@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+      target: api
     ports:
       - "3001:3001"
     environment:
@@ -10,16 +11,18 @@ services:
       - HOST=0.0.0.0
     volumes:
       - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/package.json:/app/apps/api/package.json:ro
       - ./packages/core/src:/app/packages/core/src
       - ./packages/parsers/dist:/app/packages/parsers/dist
       - /app/node_modules
-    command: npm run start:dev:api
+    # Use CMD from Dockerfile (npm run start:dev)
     restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: Dockerfile.dev
+      target: web
     ports:
       - "3000:3000"
     environment:
@@ -27,9 +30,10 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:3001
     volumes:
       - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/package.json:/app/apps/web/package.json:ro
       - ./packages/core/src:/app/packages/core/src
       - /app/node_modules
-    command: npm run start:dev:web
+    # Use CMD from Dockerfile (npm run dev)
     depends_on:
       - api
     restart: unless-stopped

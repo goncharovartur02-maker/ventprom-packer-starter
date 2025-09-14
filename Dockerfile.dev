@@ -24,7 +24,8 @@ FROM base AS api
 WORKDIR /app/apps/api
 RUN npm install --legacy-peer-deps
 EXPOSE 3001
-CMD ["npm", "run", "start:dev"]
+# Prebuild once to ensure dist/main.js exists, then start in watch mode
+CMD ["sh", "-lc", "npm run build && npm run start:dev"]
 
 # Web target
 FROM base AS web
