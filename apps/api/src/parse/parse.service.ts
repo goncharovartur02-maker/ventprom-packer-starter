@@ -50,28 +50,7 @@ export class ParseService {
     return allItems;
   }
 
-  // Legacy method for backward compatibility
-  async parseFiles(files: Express.Multer.File[]): Promise<DuctItem[]> {
-    const allItems: DuctItem[] = [];
-
-    for (const file of files) {
-      let items: DuctItem[] = [];
-
-      if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
-        items = await this.excelParser.parse(file.buffer);
-      } else if (file.mimetype === 'application/pdf') {
-        items = await this.pdfParser.parse(file.buffer);
-      } else if (file.mimetype === 'text/plain' || file.originalname.endsWith('.txt')) {
-        items = await this.textParser.parse(file.buffer);
-      } else if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') {
-        items = await this.imageParser.parse(file.buffer);
-      }
-
-      allItems.push(...items);
-    }
-
-    return allItems;
-  }
+  // Legacy method removed: use parseFilesUniversal instead to avoid undefined parser instances
 
   // Convert DuctItem to UniversalItem for backward compatibility
   private convertDuctItemToUniversal(ductItem: DuctItem): UniversalItem {
