@@ -4,7 +4,32 @@ import { useState } from 'react';
 import FileUpload from '@/components/FileUpload';
 import VehicleSelector from '@/components/VehicleSelector';
 import PackingResults from '@/components/PackingResults';
-import { DuctItem, UniversalItem, Vehicle, PackResult } from '../../../../packages/core/src';
+// Временно используем локальные типы
+interface UniversalItem {
+  id: string;
+  type: string;
+  dimensions: { [key: string]: number };
+  qty: number;
+  weightKg: number;
+}
+
+interface Vehicle {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  length: number;
+  maxPayloadKg: number;
+}
+
+interface PackResult {
+  success: boolean;
+  items: UniversalItem[];
+  vehicle: Vehicle;
+  totalWeight: number;
+  utilization: number;
+  message?: string;
+}
 
 export default function Home() {
   const [items, setItems] = useState<UniversalItem[]>([]);

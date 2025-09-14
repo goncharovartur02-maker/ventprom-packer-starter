@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { PackResult } from '../../../../packages/core/src';
+interface PackResult {
+  success: boolean;
+  items: any[];
+  vehicle: any;
+  totalWeight: number;
+  utilization: number;
+  message?: string;
+}
 
 interface ThreeDViewerProps {
   result: PackResult;

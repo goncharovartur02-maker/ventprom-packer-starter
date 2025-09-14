@@ -1,0 +1,13 @@
+@echo off
+echo Checking API container...
+docker compose -f docker-compose.dev.yml exec api sh -c "cd /app/apps/api && pwd && ls -la"
+echo.
+echo Checking if dist exists...
+docker compose -f docker-compose.dev.yml exec api sh -c "cd /app/apps/api && ls -la dist/ 2>/dev/null || echo 'dist folder not found'"
+echo.
+echo Running nest build manually...
+docker compose -f docker-compose.dev.yml exec api sh -c "cd /app/apps/api && npm run build"
+echo.
+echo Checking package.json scripts...
+docker compose -f docker-compose.dev.yml exec api sh -c "cd /app/apps/api && cat package.json | grep -A 10 scripts"
+pause

@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-      target: api
+      target: api_dev_stage
     ports:
       - "3001:3001"
     environment:
@@ -15,7 +15,7 @@ services:
       - ./packages/core/src:/app/packages/core/src
       - ./packages/parsers/dist:/app/packages/parsers/dist
       - /app/node_modules
-    # Use CMD from Dockerfile (npm run start:dev)
+    command: sh -lc "npm run build && npm run start:dev"
     restart: unless-stopped
 
   web:

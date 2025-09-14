@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { PresetsService } from './presets.service';
-import { Vehicle } from '../../../../packages/core/src';
+import { Vehicle } from '../types';
 
 @ApiTags('presets')
 @Controller('presets')

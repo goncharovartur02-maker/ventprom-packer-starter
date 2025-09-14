@@ -6,29 +6,22 @@ WORKDIR /app
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 COPY apps/web/package*.json ./apps/web/
-COPY packages/core/package*.json ./packages/core/
-COPY packages/parsers/package*.json ./packages/parsers/
 
-# Install dependencies
+# Install root dependencies
 RUN npm install --legacy-peer-deps --ignore-scripts
 
 # Copy source code
 COPY . .
 
-# Build packages
-RUN cd packages/core && npm run build || true
-RUN cd packages/parsers && npm run build || true
-
 # API target
-FROM base AS api
+FROM base AS api_dev_stage
 WORKDIR /app/apps/api
 RUN npm install --legacy-peer-deps
 EXPOSE 3001
-# Prebuild once to ensure dist/main.js exists, then start in watch mode
-CMD ["sh", "-lc", "npm run build && npm run start:dev"]
+CMD ["sh", "-lc", "npm run build && sleep 2 && npm run start:dev"]
 
 # Web target
-FROM base AS web
+FROM base AS web_dev_stage
 WORKDIR /app/apps/web
 RUN npm install --legacy-peer-deps
 EXPOSE 3000

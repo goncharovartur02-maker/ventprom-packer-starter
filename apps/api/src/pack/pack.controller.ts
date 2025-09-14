@@ -1,7 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { PackService } from './pack.service';
-import { PackRequest, PackResult, Vehicle, DuctItem } from '../../../../packages/core/src';
+import { PackRequest, PackResult, Vehicle, DuctItem } from '../types';
 
 @ApiTags('pack')
 @Controller('pack')

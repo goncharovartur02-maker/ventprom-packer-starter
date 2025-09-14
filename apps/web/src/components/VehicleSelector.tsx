@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Vehicle } from '../../../../packages/core/src';
+interface Vehicle {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  length: number;
+  maxPayloadKg: number;
+}
 
 interface VehicleSelectorProps {
   onSelect: (vehicle: Vehicle) => void;

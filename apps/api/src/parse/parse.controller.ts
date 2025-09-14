@@ -2,7 +2,7 @@ import { Controller, Post, UseInterceptors, UploadedFiles } from '@nestjs/common
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { ParseService } from './parse.service';
-import { DuctItem, UniversalItem } from '../../../../packages/core/src';
+import { UniversalItem } from '../types';
 
 @ApiTags('parse')
 @Controller('parse')

@@ -1,0 +1,13 @@
+@echo off
+echo Stopping containers...
+docker compose -f docker-compose.dev.yml down
+echo.
+echo Starting containers...
+docker compose -f docker-compose.dev.yml up -d
+echo.
+echo Checking API logs...
+docker compose -f docker-compose.dev.yml logs --tail=30 api
+echo.
+echo Testing API...
+curl -s http://localhost:3001/presets || echo "API not responding"
+pause

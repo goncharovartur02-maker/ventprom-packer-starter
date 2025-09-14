@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PackResult } from '../../../../packages/core/src';
+import { PackResult } from '../types';
 
 @Injectable()
 export class ExportService {

@@ -2,7 +2,7 @@ import { Controller, Post, Body, Res } from '@nestjs/common';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ExportService } from './export.service';
-import { PackResult } from '../../../../packages/core/src';
+import { PackResult } from '../types';
 
 @ApiTags('export')
 @Controller('export')

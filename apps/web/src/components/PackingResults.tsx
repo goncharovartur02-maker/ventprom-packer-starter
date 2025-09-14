@@ -1,6 +1,13 @@
 'use client';
 
-import { PackResult } from '../../../../packages/core/src';
+interface PackResult {
+  success: boolean;
+  items: any[];
+  vehicle: any;
+  totalWeight: number;
+  utilization: number;
+  message?: string;
+}
 import ThreeDViewer from './ThreeDViewer';
 
 interface PackingResultsProps {

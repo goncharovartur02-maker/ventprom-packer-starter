@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Vehicle } from '../../../../packages/core/src';
+import { Vehicle } from '../types';
 
 @Injectable()
 export class PresetsService {
