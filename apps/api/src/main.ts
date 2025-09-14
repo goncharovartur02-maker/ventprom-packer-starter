@@ -17,7 +17,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3001);
+  // Bind to 0.0.0.0 so the server is reachable from Docker host
+  await app.listen(3001, '0.0.0.0');
   console.log('API server running on http://localhost:3001');
 }
 bootstrap();

@@ -260,3 +260,13 @@ docker-compose up --build
 - **`TEST_REAL.bat`** - Реальное тестирование системы
 - **`GIT_PUSH.bat`** - Push изменений в GitHub
 - **`RULES.md`** - Подробные правила разработки
+
+### 🛠 Последние правки (2025-09-14)
+- API (`apps/api/src/main.ts`): сервер слушает на 0.0.0.0 (исправляет ERR_EMPTY_RESPONSE из Docker).
+- Web (`apps/web/src/app/page.tsx`, `apps/web/src/components/VehicleSelector.tsx`): все запросы используют `NEXT_PUBLIC_API_URL`.
+- Docker dev (`docker-compose.dev.yml`): добавлены переменные `HOST=0.0.0.0` для API и `NEXT_PUBLIC_API_URL=http://localhost:3001` для Web.
+
+Запуск после обновлений:
+1) Пересобрать дев-контейнеры: `docker compose -f docker-compose.dev.yml up --build -d`
+2) Обновить страницу `http://localhost:3000`
+3) Проверить `http://localhost:3001/presets`

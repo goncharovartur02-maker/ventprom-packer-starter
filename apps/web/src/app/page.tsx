@@ -23,7 +23,8 @@ export default function Home() {
         formData.append('files', file);
       });
 
-      const response = await fetch('http://localhost:3001/parse', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/parse`, {
         method: 'POST',
         body: formData,
       });
@@ -51,7 +52,8 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/pack', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/pack`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +81,8 @@ export default function Home() {
     if (!packResult) return;
 
     try {
-      const response = await fetch('http://localhost:3001/export/pdf', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/export/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +118,8 @@ export default function Home() {
     if (!packResult) return;
 
     try {
-      const response = await fetch('http://localhost:3001/export/glb', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/export/glb`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +151,8 @@ export default function Home() {
     if (!packResult) return;
 
     try {
-      const response = await fetch('http://localhost:3001/export/html', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/export/html`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

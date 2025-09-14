@@ -16,7 +16,8 @@ export default function VehicleSelector({ onSelect, selected }: VehicleSelectorP
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
-        const response = await fetch('http://localhost:3001/presets');
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${apiBase}/presets`);
         if (!response.ok) {
           throw new Error('Failed to fetch vehicles');
         }

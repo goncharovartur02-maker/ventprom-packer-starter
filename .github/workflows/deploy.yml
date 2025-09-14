@@ -1,9 +1,7 @@
-name: Deploy to Docker
+name: Deploy to Production
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
     branches: [ main, master ]
 
 jobs:
@@ -13,60 +11,41 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
       with:
-        node-version: '18'
-        cache: 'npm'
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
     
-    - name: Install dependencies
-      run: |
-        npm install --legacy-peer-deps
-        cd packages/core && npm install --legacy-peer-deps
-        cd ../parsers && npm install --legacy-peer-deps
-        cd ../../apps/api && npm install --legacy-peer-deps
-        cd ../web && npm install --legacy-peer-deps
+    - name: Build and push API
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.dev
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/ventprom-api:latest
+        target: api
     
-    - name: Build packages
-      run: |
-        cd packages/core && npm run build
-        cd ../parsers && npm run build
-        cd ../../apps/api && npm run build
-        cd ../web && npm run build
+    - name: Build and push Web
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.dev
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/ventprom-web:latest
+        target: web
     
-    - name: Test parsers
-      run: |
-        node -e "
-        const { PdfParser } = require('./packages/parsers/dist');
-        const fs = require('fs');
-        const parser = new PdfParser();
-        
-        // Test with example PDF
-        const pdfPath = './examples/example pdf.pdf';
-        if (fs.existsSync(pdfPath)) {
-          const buffer = fs.readFileSync(pdfPath);
-          parser.parse(buffer).then(items => {
-            console.log('✅ PDF Parser test passed:', items.length, 'items found');
-            if (items.length === 0) {
-              console.log('❌ No items found - parser may have issues');
-              process.exit(1);
-            }
-          }).catch(err => {
-            console.log('❌ PDF Parser test failed:', err.message);
-            process.exit(1);
-          });
-        } else {
-          console.log('⚠️ No test PDF found, skipping test');
-        }
-        "
-    
-    - name: Build Docker images
-      run: |
-        docker-compose -f docker-compose.dev.yml build
-    
-    - name: Deploy to production
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-      run: |
-        docker-compose down
-        docker-compose up -d --build
-        echo "🚀 Application deployed successfully!"
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.KEY }}
+        script: |
+          cd /home/ventprom
+          docker-compose pull
+          docker-compose up -d
+          docker system prune -f
