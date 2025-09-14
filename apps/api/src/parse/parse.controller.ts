@@ -2,7 +2,7 @@ import { Controller, Post, UseInterceptors, UploadedFiles } from '@nestjs/common
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { ParseService } from './parse.service';
-import { DuctItem } from '../../../../packages/core/src';
+import { DuctItem, UniversalItem } from '../../../../packages/core/src';
 
 @ApiTags('parse')
 @Controller('parse')
@@ -13,8 +13,8 @@ export class ParseController {
   @UseInterceptors(FilesInterceptor('files'))
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'Files parsed successfully' })
-  async parseFiles(@UploadedFiles() files: Express.Multer.File[]): Promise<{ items: DuctItem[] }> {
-    const items = await this.parseService.parseFiles(files);
+  async parseFiles(@UploadedFiles() files: Express.Multer.File[]): Promise<{ items: UniversalItem[] }> {
+    const items = await this.parseService.parseFilesUniversal(files);
     return { items };
   }
 }

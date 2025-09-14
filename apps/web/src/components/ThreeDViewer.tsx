@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { PackResult } from '@ventprom/core';
+import { PackResult } from '../../../../packages/core/src';
 
 interface ThreeDViewerProps {
   result: PackResult;

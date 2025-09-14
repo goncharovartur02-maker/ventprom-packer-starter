@@ -1,5 +1,5 @@
 import * as ExcelJS from 'exceljs';
-import { DuctItem, UniversalItem } from '@ventprom/core';
+import { DuctItem, UniversalItem } from '../../core/src';
 import { UniversalParser } from './universal';
 
 export class ExcelParser {

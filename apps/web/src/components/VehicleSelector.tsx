@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Vehicle } from '@ventprom/core';
+import { Vehicle } from '../../../../packages/core/src';
 
 interface VehicleSelectorProps {
   onSelect: (vehicle: Vehicle) => void;

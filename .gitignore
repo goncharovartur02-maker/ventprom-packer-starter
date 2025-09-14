@@ -40,27 +40,18 @@ pids/
 # Coverage directory used by tools like istanbul
 coverage/
 
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
 # Docker
 .dockerignore
 
 # Temporary files
-tmp/
-temp/
+*.tmp
+*.temp
+
+# Test files (keep examples but ignore temp test files)
+test_*.js
+TEST_*.bat
+*_test.js
+
+# Backup files
+*.bak
+*.backup

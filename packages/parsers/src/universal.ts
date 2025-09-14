@@ -1,4 +1,4 @@
-import { UniversalItem, DuctItem } from '@ventprom/core';
+import { UniversalItem, DuctItem } from '../../core/src';
 
 export class UniversalParser {
   private columnMappings = {

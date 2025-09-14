@@ -4,10 +4,10 @@ import { useState } from 'react';
 import FileUpload from '@/components/FileUpload';
 import VehicleSelector from '@/components/VehicleSelector';
 import PackingResults from '@/components/PackingResults';
-import { DuctItem, Vehicle, PackResult } from '@ventprom/core';
+import { DuctItem, UniversalItem, Vehicle, PackResult } from '../../../../packages/core/src';
 
 export default function Home() {
-  const [items, setItems] = useState<DuctItem[]>([]);
+  const [items, setItems] = useState<UniversalItem[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [packResult, setPackResult] = useState<PackResult | null>(null);
   const [loading, setLoading] = useState(false);

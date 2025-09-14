@@ -23,7 +23,9 @@
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write .",
     "docker:up": "docker compose up",
-    "docker:build": "docker compose build"
+    "docker:build": "docker compose build",
+    "start:dev:api": "cd apps/api && npm run start:dev",
+    "start:dev:web": "cd apps/web && npm run dev"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",

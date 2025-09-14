@@ -1,0 +1,35 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY apps/web/package*.json ./apps/web/
+COPY packages/core/package*.json ./packages/core/
+COPY packages/parsers/package*.json ./packages/parsers/
+
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build core package
+RUN npm run build:core
+
+# Copy pre-built parsers
+COPY packages/parsers/dist ./packages/parsers/dist
+
+# Build API
+RUN npm run build:api
+
+# Build Web
+RUN npm run build:web
+
+# Expose ports
+EXPOSE 3001 3000
+
+# Start both services
+CMD ["sh", "-c", "npm run start:api & npm run start:web & wait"]
+

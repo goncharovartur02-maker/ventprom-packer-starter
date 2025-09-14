@@ -1,5 +1,5 @@
 import pdfParse from 'pdf-parse';
-import { DuctItem } from '@ventprom/core';
+import { DuctItem } from '../../core/src';
 
 export class PdfParser {
   async parse(buffer: Buffer): Promise<DuctItem[]> {
@@ -18,37 +18,167 @@ export class PdfParser {
   }
 
   private extractTableData(text: string): DuctItem[] {
+    console.log('PDF Parser: Full text for analysis:', text);
+    
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const items: DuctItem[] = [];
     
-    // Look for table-like patterns
-    let headerFound = false;
-    let columnMap: Record<string, number> = {};
+    console.log('PDF Parser: Total lines found:', lines.length);
+    console.log('PDF Parser: All lines:', lines);
     
+    // Look for air duct patterns in ALL text, not just table headers
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Try to detect header row
-      if (!headerFound && this.looksLikeHeader(line)) {
-        const columns = this.splitTableRow(line);
-        columnMap = this.mapColumns(columns);
-        headerFound = true;
-        continue;
-      }
-      
-      // If we have a header, try to parse data rows
-      if (headerFound && Object.keys(columnMap).length > 0) {
-        const columns = this.splitTableRow(line);
-        if (columns.length >= 3) { // Minimum columns for a valid row
-          const item = this.parseRow(columns, columnMap);
-          if (item) {
-            items.push(item);
-          }
+      // Look for "Воздуховод" pattern
+      if (this.containsAirDuct(line)) {
+        console.log('PDF Parser: Found air duct line:', line);
+        
+        // Try to extract dimensions and quantity from this line
+        const item = this.parseAirDuctLine(line, i, lines);
+        if (item) {
+          console.log('PDF Parser: Extracted air duct item:', item);
+          items.push(item);
         }
       }
     }
     
+    console.log('PDF Parser: Total items extracted:', items.length);
     return items;
+  }
+
+  private containsAirDuct(line: string): boolean {
+    const airDuctKeywords = [
+      'Воздуховод',
+      'воздуховод', 
+      'ВОЗДУХОВОД',
+      'воздуховоды',
+      'Воздуховоды'
+    ];
+    
+    return airDuctKeywords.some(keyword => line.includes(keyword));
+  }
+
+  private parseAirDuctLine(line: string, lineIndex: number, allLines: string[]): DuctItem | null {
+    try {
+      console.log('PDF Parser: Parsing air duct line:', line);
+      
+      // Extract dimensions - look for patterns like "1500x500-1160"
+      const dimensionMatch = line.match(/(\d+)x(\d+)-(\d+)/);
+      if (!dimensionMatch) {
+        console.log('PDF Parser: No dimensions found in line');
+        return null;
+      }
+      
+      const width = parseInt(dimensionMatch[1]);
+      const height = parseInt(dimensionMatch[2]);
+      const length = parseInt(dimensionMatch[3]);
+      
+      console.log('PDF Parser: Found dimensions:', { width, height, length });
+      
+      // Extract quantity - look in current line and nearby lines
+      let quantity = this.extractQuantity(line, lineIndex, allLines);
+      
+      if (quantity === 0) {
+        quantity = 1; // Default quantity
+      }
+      
+      console.log('PDF Parser: Found quantity:', quantity);
+      
+      // Extract material info
+      const material = this.extractMaterial(line);
+      
+      const item: DuctItem = {
+        id: `airduct_${lineIndex}`,
+        name: `Воздуховод ${width}x${height}-${length}`,
+        type: 'rect', // Fixed type to match DuctItem interface
+        dimensions: {
+          width: width,
+          height: height,
+          length: length
+        },
+        quantity: quantity,
+        material: material,
+        weight: this.calculateWeight(width, height, length, material),
+        volume: width * height * length / 1000000, // Convert to m³
+        originalText: line
+      };
+      
+      return item;
+    } catch (error) {
+      console.error('PDF Parser: Error parsing air duct line:', error);
+      return null;
+    }
+  }
+
+  private extractQuantity(line: string, lineIndex: number, allLines: string[]): number {
+    // Look for quantity in current line
+    const quantityMatch = line.match(/(\d+)\s*шт/);
+    if (quantityMatch) {
+      return parseInt(quantityMatch[1]);
+    }
+    
+    // Look for quantity in next few lines
+    for (let i = lineIndex + 1; i < Math.min(lineIndex + 5, allLines.length); i++) {
+      const nextLine = allLines[i];
+      const quantityMatch = nextLine.match(/(\d+)\s*шт/);
+      if (quantityMatch) {
+        return parseInt(quantityMatch[1]);
+      }
+    }
+    
+    return 0;
+  }
+
+  private extractMaterial(line: string): string {
+    // Look for material indicators
+    if (line.includes('оц.') || line.includes('оцинк')) {
+      return 'оцинкованная сталь';
+    }
+    if (line.includes('нерж') || line.includes('нержавеющая')) {
+      return 'нержавеющая сталь';
+    }
+    if (line.includes('черн') || line.includes('черная')) {
+      return 'черная сталь';
+    }
+    
+    return 'оцинкованная сталь'; // Default
+  }
+
+  private calculateWeight(width: number, height: number, length: number, material: string): number {
+    // Real calculation based on GOST standards for galvanized steel ducts
+    
+    // Calculate surface area of rectangular duct (4 sides)
+    const perimeter = 2 * (width + height); // mm
+    const surfaceArea = perimeter * length; // mm²
+    const surfaceAreaM2 = surfaceArea / 1000000; // Convert to m²
+    
+    // Determine thickness based on material and size
+    let thickness: number;
+    if (material.includes('оцинк') || material.includes('оц.')) {
+      // Galvanized steel thickness based on duct size
+      if (width <= 300 && height <= 300) {
+        thickness = 0.5; // 0.5mm for small ducts
+      } else if (width <= 500 && height <= 500) {
+        thickness = 0.7; // 0.7mm for medium ducts
+      } else if (width <= 800 && height <= 800) {
+        thickness = 0.8; // 0.8mm for large ducts
+      } else {
+        thickness = 1.0; // 1.0mm for very large ducts
+      }
+    } else if (material.includes('нерж')) {
+      thickness = 0.8; // Stainless steel typically 0.8mm
+    } else {
+      thickness = 0.7; // Default thickness
+    }
+    
+    // Weight per m² based on thickness (from GOST standards)
+    const weightPerM2 = thickness * 7.85; // kg/m² (steel density = 7850 kg/m³)
+    
+    // Total weight
+    const totalWeight = surfaceAreaM2 * weightPerM2;
+    
+    return Math.round(totalWeight * 100) / 100; // Round to 2 decimal places
   }
 
   private extractFromUnstructuredText(text: string): DuctItem[] {

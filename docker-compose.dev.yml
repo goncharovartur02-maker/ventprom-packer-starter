@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages/core/src:/app/packages/core/src
+      - ./packages/parsers/dist:/app/packages/parsers/dist
+      - /app/node_modules
+    command: npm run start:dev:api
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./packages/core/src:/app/packages/core/src
+      - /app/node_modules
+    command: npm run start:dev:web
+    depends_on:
+      - api
+    restart: unless-stopped

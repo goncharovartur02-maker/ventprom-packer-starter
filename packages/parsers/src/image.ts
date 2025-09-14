@@ -1,4 +1,4 @@
-import { DuctItem } from '@ventprom/core';
+import { DuctItem } from '../../core/src';
 import * as Tesseract from 'tesseract.js';
 
 export class ImageParser {

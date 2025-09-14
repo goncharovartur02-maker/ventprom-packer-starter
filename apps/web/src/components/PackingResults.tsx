@@ -1,6 +1,6 @@
 'use client';
 
-import { PackResult } from '@ventprom/core';
+import { PackResult } from '../../../../packages/core/src';
 import ThreeDViewer from './ThreeDViewer';
 
 interface PackingResultsProps {

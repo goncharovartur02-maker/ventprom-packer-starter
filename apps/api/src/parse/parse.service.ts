@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DuctItem, UniversalItem } from '../../../../packages/core/src';
-import { ExcelParser, PdfParser, TextParser, ImageParser } from '../../../../packages/parsers/src';
+const { ExcelParser, PdfParser, TextParser, ImageParser } = require('../../../../packages/parsers/dist');
 
 @Injectable()
 export class ParseService {
@@ -19,10 +19,16 @@ export class ParseService {
       if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
         items = await this.excelParser.parseUniversal(file.buffer);
       } else if (file.mimetype === 'application/pdf') {
-        // TODO: Implement universal PDF parsing
-        items = await this.pdfParser.parse(file.buffer).then(ductItems => 
-          ductItems.map(item => this.convertDuctItemToUniversal(item))
-        );
+        try {
+          console.log('ParseService: Processing PDF file:', file.originalname);
+          const ductItems = await this.pdfParser.parse(file.buffer);
+          console.log('ParseService: PDF parsed successfully, found', ductItems.length, 'items');
+          items = ductItems.map(item => this.convertDuctItemToUniversal(item));
+        } catch (error) {
+          console.error('ParseService: PDF parsing error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          throw new Error(`PDF parsing failed: ${errorMessage}`);
+        }
       } else if (file.mimetype === 'text/plain' || file.originalname.endsWith('.txt')) {
         // TODO: Implement universal text parsing
         items = await this.textParser.parse(file.buffer).then(ductItems => 
