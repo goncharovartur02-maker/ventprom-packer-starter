@@ -2,19 +2,354 @@ import pdfParse from 'pdf-parse';
 import { DuctItem } from '../../core/src/models';
 
 export class PdfParser {
+  private ductMap: Map<string, DuctItem> = new Map(); // Для дедупликации
+
   async parse(buffer: Buffer): Promise<DuctItem[]> {
     const data = await (pdfParse as any)(buffer);
     const text = data.text;
     
-    // Try to extract table data from PDF text
+    console.log('PDF Parser: Начинаем анализ спецификации воздуховодов');
+    
+    // Сброс состояния для нового документа
+    this.ductMap.clear();
+    
+    // 1. Попытка извлечь данные из спецификационной таблицы
+    const specItems = this.extractSpecificationTable(text);
+    
+    if (specItems.length > 0) {
+      console.log(`PDF Parser: Найдено ${specItems.length} воздуховодов в спецификации`);
+      return this.deduplicateItems(Array.from(this.ductMap.values()));
+    }
+    
+    // 2. Fallback: классический парсинг
     const items = this.extractTableData(text);
     
     if (items.length === 0) {
-      // Fallback: try to extract dimensions from unstructured text
+      // 3. Последний fallback: неструктурированный текст
       return this.extractFromUnstructuredText(text);
     }
     
     return items;
+  }
+
+  // Новый метод для парсинга спецификационных таблиц
+  private extractSpecificationTable(text: string): DuctItem[] {
+    console.log('PDF Parser: Поиск спецификационной таблицы');
+    
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    const items: DuctItem[] = [];
+    
+    // Ищем заголовки таблицы спецификации
+    let headerIndex = -1;
+    let columnMapping: { name: number; designation: number; quantity: number } | null = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase();
+      
+      // Ищем строку с заголовками таблицы
+      if (this.isSpecificationHeader(line)) {
+        console.log('PDF Parser: Найден заголовок спецификации:', lines[i]);
+        headerIndex = i;
+        columnMapping = this.parseSpecificationHeader(lines[i]);
+        break;
+      }
+    }
+    
+    if (headerIndex === -1 || !columnMapping) {
+      console.log('PDF Parser: Заголовок спецификации не найден');
+      return [];
+    }
+    
+    // Парсим строки таблицы после заголовка
+    for (let i = headerIndex + 1; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Пропускаем пустые строки и разделители
+      if (!line || line.match(/^[-=_\s]+$/)) continue;
+      
+      // Останавливаемся на конце таблицы
+      if (this.isEndOfTable(line)) break;
+      
+      // Проверяем, содержит ли строка воздуховод
+      if (this.containsAirDuctInSpecification(line)) {
+        console.log('PDF Parser: Найдена строка воздуховода:', line);
+        
+        const item = this.parseSpecificationRow(line, columnMapping, i);
+        if (item) {
+          this.addOrUpdateDuct(item);
+          items.push(item);
+        }
+      }
+    }
+    
+    console.log(`PDF Parser: Извлечено ${items.length} воздуховодов из спецификации`);
+    return items;
+  }
+
+  private isSpecificationHeader(line: string): boolean {
+    // Ищем строки содержащие ключевые столбцы спецификации
+    const requiredColumns = ['наименование', 'обозначение', 'количество'];
+    const foundColumns = requiredColumns.filter(col => line.includes(col));
+    
+    return foundColumns.length >= 2; // Минимум 2 из 3 колонок
+  }
+
+  private parseSpecificationHeader(headerLine: string): { name: number; designation: number; quantity: number } | null {
+    const columns = this.splitTableRow(headerLine);
+    const mapping = { name: -1, designation: -1, quantity: -1 };
+    
+    columns.forEach((col, index) => {
+      const lower = col.toLowerCase();
+      
+      if (lower.includes('наименование') || lower.includes('название')) {
+        mapping.name = index;
+      } else if (lower.includes('обозначение') || lower.includes('код') || lower.includes('артикул')) {
+        mapping.designation = index;
+      } else if (lower.includes('количество') || lower.includes('кол-во') || lower.includes('шт')) {
+        mapping.quantity = index;
+      }
+    });
+    
+    // Проверяем, что нашли хотя бы наименование и количество
+    if (mapping.name >= 0 && mapping.quantity >= 0) {
+      console.log('PDF Parser: Структура таблицы:', mapping);
+      return mapping;
+    }
+    
+    return null;
+  }
+
+  private containsAirDuctInSpecification(line: string): boolean {
+    const ductKeywords = [
+      'воздуховод',
+      'воздуховод прямоугольный',
+      'воздуховод круглый',
+      'воздуховод прямоуг',
+      'канал воздушный',
+      'короб воздушный'
+    ];
+    
+    const excludeKeywords = [
+      'отвод',
+      'тройник', 
+      'переход',
+      'врезка',
+      'заглушка',
+      'решетка',
+      'диффузор',
+      'клапан',
+      'фланец'
+    ];
+    
+    const lowerLine = line.toLowerCase();
+    
+    // Должен содержать ключевое слово воздуховода
+    const hasAirDuct = ductKeywords.some(keyword => lowerLine.includes(keyword));
+    
+    // Но не должен содержать исключающие слова (фасонные части)
+    const hasFittings = excludeKeywords.some(keyword => lowerLine.includes(keyword));
+    
+    return hasAirDuct && !hasFittings;
+  }
+
+  private parseSpecificationRow(
+    line: string, 
+    columnMapping: { name: number; designation: number; quantity: number },
+    lineIndex: number
+  ): DuctItem | null {
+    try {
+      const columns = this.splitTableRow(line);
+      
+      const nameColumn = columns[columnMapping.name] || '';
+      const quantityColumn = columns[columnMapping.quantity] || '1';
+      const designationColumn = columns[columnMapping.designation] || '';
+      
+      console.log('PDF Parser: Парсинг строки:', { nameColumn, quantityColumn, designationColumn });
+      
+      // Извлекаем размеры из наименования
+      const dimensions = this.extractDimensionsFromName(nameColumn);
+      if (!dimensions) {
+        console.log('PDF Parser: Не удалось извлечь размеры из:', nameColumn);
+        return null;
+      }
+      
+      // Извлекаем количество
+      const quantity = this.parseQuantityFromText(quantityColumn);
+      
+      // Извлекаем тип фланца
+      const flangeType = this.extractFlangeType(nameColumn + ' ' + designationColumn);
+      
+      // Создаем ключ для дедупликации
+      const key = this.createDuctKey(dimensions);
+      
+      const item: DuctItem = {
+        id: `spec_${lineIndex}_${key}`,
+        type: dimensions.type,
+        qty: quantity,
+        length: dimensions.length,
+        weightKg: this.calculateWeight(
+          dimensions.w || dimensions.d || 0, 
+          dimensions.h || dimensions.d || 0, 
+          dimensions.length, 
+          'оцинкованная сталь'
+        ),
+        ...(dimensions.w && dimensions.h ? { w: dimensions.w, h: dimensions.h } : {}),
+        ...(dimensions.d ? { d: dimensions.d } : {}),
+        ...(flangeType ? { flangeType } : {})
+      };
+      
+      console.log('PDF Parser: Создан воздуховод:', item);
+      return item;
+      
+    } catch (error) {
+      console.error('PDF Parser: Ошибка парсинга строки спецификации:', error);
+      return null;
+    }
+  }
+
+  private extractDimensionsFromName(name: string): { 
+    type: 'rect' | 'round'; 
+    w?: number; 
+    h?: number; 
+    d?: number; 
+    length: number 
+  } | null {
+    // Прямоугольные воздуховоды: "Воздуховод 500х300-1000", "500x300-1200"
+    const rectMatch = name.match(/(\d+)\s*[x×х]\s*(\d+)\s*[-–]\s*(\d+)/);
+    if (rectMatch) {
+      return {
+        type: 'rect',
+        w: parseInt(rectMatch[1]),
+        h: parseInt(rectMatch[2]),
+        length: parseInt(rectMatch[3])
+      };
+    }
+    
+    // Круглые воздуховоды: "Воздуховод Ø200-1000", "D200-1500"
+    const roundMatch = name.match(/[ØD]?\s*(\d+)\s*[-–]\s*(\d+)/);
+    if (roundMatch && name.toLowerCase().includes('круг')) {
+      return {
+        type: 'round',
+        d: parseInt(roundMatch[1]),
+        length: parseInt(roundMatch[2])
+      };
+    }
+    
+    // Альтернативный формат: "Воздуховод прямоугольный 400х200х1000"
+    const altRectMatch = name.match(/(\d+)\s*[x×х]\s*(\d+)\s*[x×х]\s*(\d+)/);
+    if (altRectMatch) {
+      return {
+        type: 'rect',
+        w: parseInt(altRectMatch[1]),
+        h: parseInt(altRectMatch[2]),
+        length: parseInt(altRectMatch[3])
+      };
+    }
+    
+    return null;
+  }
+
+  private extractFlangeType(text: string): string | null {
+    const lowerText = text.toLowerCase();
+    
+    // Проверяем различные типы фланцев
+    if (lowerText.includes('tdc')) {
+      return 'TDC';
+    }
+    
+    if (lowerText.includes('шина 30') || lowerText.includes('шина30')) {
+      return 'SHINA_30';
+    }
+    
+    if (lowerText.includes('шина 20') || lowerText.includes('шина20')) {
+      return 'SHINA_20';
+    }
+    
+    if (lowerText.includes('призма') || lowerText.includes('prizma')) {
+      return 'PRIZMA';
+    }
+    
+    if (lowerText.includes('угловой') || lowerText.includes('angle')) {
+      return 'ANGLE';
+    }
+    
+    if (lowerText.includes('резин') || lowerText.includes('rubber')) {
+      return 'RUBBER';
+    }
+    
+    return null; // DEFAULT будет назначен автоматически
+  }
+
+  private parseQuantityFromText(text: string): number {
+    // Различные форматы количества
+    const patterns = [
+      /(\d+)\s*шт/,           // "5 шт"
+      /(\d+)\s*штук/,         // "5 штук"
+      /(\d+)\s*м\.п/,         // "10 м.п" (метры погонные)
+      /^(\d+)$/,              // Просто число
+      /(\d+),(\d+)/           // "5,5" (дробное количество)
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        if (pattern === patterns[4]) {
+          // Дробное число
+          return parseFloat(match[1] + '.' + match[2]);
+        }
+        return parseInt(match[1]);
+      }
+    }
+    
+    return 1; // По умолчанию
+  }
+
+  private isEndOfTable(line: string): boolean {
+    const endMarkers = [
+      'итого',
+      'всего',
+      'сумма',
+      'total',
+      'примечание',
+      'note',
+      'страница',
+      'лист'
+    ];
+    
+    const lowerLine = line.toLowerCase();
+    return endMarkers.some(marker => lowerLine.includes(marker));
+  }
+
+  private createDuctKey(dimensions: { type: string; w?: number; h?: number; d?: number; length: number }): string {
+    if (dimensions.type === 'rect') {
+      return `rect_${dimensions.w}x${dimensions.h}x${dimensions.length}`;
+    } else {
+      return `round_${dimensions.d}x${dimensions.length}`;
+    }
+  }
+
+  private addOrUpdateDuct(item: DuctItem): void {
+    const key = this.createDuctKey({
+      type: item.type,
+      w: item.w,
+      h: item.h,
+      d: item.d,
+      length: item.length
+    });
+    
+    const existing = this.ductMap.get(key);
+    if (existing) {
+      // Суммируем количество для одинаковых воздуховодов
+      existing.qty += item.qty;
+      console.log(`PDF Parser: Объединены дубликаты ${key}, новое количество: ${existing.qty}`);
+    } else {
+      this.ductMap.set(key, { ...item });
+    }
+  }
+
+  private deduplicateItems(items: DuctItem[]): DuctItem[] {
+    console.log(`PDF Parser: Дедупликация ${items.length} → ${this.ductMap.size} уникальных воздуховодов`);
+    return Array.from(this.ductMap.values());
   }
 
   private extractTableData(text: string): DuctItem[] {
@@ -88,6 +423,9 @@ export class PdfParser {
       // Extract material info
       const material = this.extractMaterial(line);
       
+      // Extract flange type
+      const flangeType = this.extractFlangeType(line);
+      
       const weight = this.calculateWeight(width, height, length, material);
       
       const item: DuctItem = {
@@ -97,7 +435,8 @@ export class PdfParser {
         h: height,
         length: length,
         qty: quantity,
-        weightKg: weight
+        weightKg: weight,
+        ...(flangeType ? { flangeType } : {})
       };
       
       return item;

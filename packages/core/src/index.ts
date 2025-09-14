@@ -6,6 +6,8 @@ export * from './heuristics/beam';
 export * from './heuristics/greedy';
 export * from './heuristics/multistart';
 export * from './heuristics/layer_rules';
+export * from './flange-rules';
+export * from './optimization/multi-scenario';
 
 
 

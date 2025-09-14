@@ -1,57 +1,127 @@
 import { Injectable } from '@nestjs/common';
 import { Vehicle, DuctItem, PackResult } from '../types';
+import { MultiScenarioOptimizer } from '@ventprom/core';
 
 @Injectable()
 export class PackService {
+  private optimizer = new MultiScenarioOptimizer();
+  
   async pack(vehicle: Vehicle, items: DuctItem[]): Promise<PackResult> {
-    console.log(`PackService: Упаковка ${items.length} воздуховодов в ${vehicle.name}`);
+    console.log(`PackService: Многосценарный анализ для ${items.length} воздуховодов в ${vehicle.name}`);
     
-    // Применяем алгоритм матрешки
+    try {
+      // Анализируем все сценарии упаковки
+      const scenarios = await this.optimizer.analyzeScenarios(vehicle, items);
+      
+      // Выбираем лучший сценарий с учетом приоритетов
+      const hasFragileItems = items.some(item => (item as any).material === 'galvanized');
+      const best = this.optimizer.selectBestScenario(scenarios, {
+        prioritizeSafety: true, // Приоритет безопасности
+        hasFragileItems
+      });
+      
+      // Логируем результаты анализа
+      console.log(`Выбран сценарий: ${best.config.name}`);
+      console.log(`Предупреждения: ${best.warnings.length}`);
+      console.log(`Рекомендации: ${best.recommendations.length}`);
+      
+      // Применяем дополнительную оптимизацию матрешки
+      const optimizedItems = this.optimizeWithNesting(items);
+      
+      // Создаем расширенное сообщение
+      let message = `🎯 Многосценарный анализ завершен:
+📊 Выбран сценарий: "${best.config.name}"
+📈 Метрики:
+  • Машин использовано: ${best.metrics.vehiclesUsed}
+  • Загрузка: ${best.metrics.avgUtilization.toFixed(1)}%
+  • Вес: ${best.metrics.totalWeight.toFixed(1)} кг
+  • Центр тяжести: ${best.metrics.centerOfGravityHeight.toFixed(1)}% высоты
+  • Стабильность: ${best.metrics.stabilityScore.toFixed(1)}/100
+  • Защита хрупких: ${best.metrics.fragileProtectionScore.toFixed(1)}/100
+  • Эффективность разгрузки: ${best.metrics.unloadingEfficiency.toFixed(1)}/100`;
+
+      // Добавляем информацию о безопасности транспортировки
+      const safety = best.metrics.transportSafety;
+      message += `\n🛡️ Безопасность транспортировки:
+  • Стабильность торможения: ${safety.brakeStability ? '✅' : '❌'}
+  • Стабильность поворотов: ${safety.turnStability ? '✅' : '❌'}
+  • Устойчивость к вибрации: ${safety.vibrationResistance ? '✅' : '❌'}
+  • Риск опрокидывания: ${this.getRiskEmoji(safety.tippingRisk)} ${safety.tippingRisk}`;
+
+      // Добавляем предупреждения
+      if (best.warnings.length > 0) {
+        message += `\n⚠️ Предупреждения:\n${best.warnings.map(w => `  ${w}`).join('\n')}`;
+      }
+      
+      // Добавляем рекомендации
+      if (best.recommendations.length > 0) {
+        message += `\n💡 Рекомендации:\n${best.recommendations.map(r => `  ${r}`).join('\n')}`;
+      }
+
+      // Информация о других сценариях
+      if (scenarios.length > 1) {
+        message += `\n\n📋 Альтернативные сценарии:`;
+        scenarios.slice(1, 3).forEach((scenario, index) => {
+          message += `\n${index + 2}. "${scenario.config.name}" - машин: ${scenario.metrics.vehiclesUsed}, стабильность: ${scenario.metrics.stabilityScore.toFixed(1)}`;
+        });
+      }
+      
+      // Возвращаем результат с дополнительной информацией
+      const result: PackResult = {
+        success: true,
+        items: optimizedItems,
+        vehicle,
+        totalWeight: best.metrics.totalWeight,
+        utilization: best.metrics.avgUtilization,
+        message
+      };
+
+      // Добавляем мета-информацию о сценарии
+      (result as any).scenario = {
+        name: best.config.name,
+        description: best.config.description,
+        metrics: best.metrics,
+        warnings: best.warnings,
+        recommendations: best.recommendations,
+        allScenarios: scenarios.map(s => ({
+          name: s.config.name,
+          vehiclesUsed: s.metrics.vehiclesUsed,
+          stabilityScore: s.metrics.stabilityScore,
+          utilization: s.metrics.avgUtilization
+        }))
+      };
+      
+      return result;
+      
+    } catch (error) {
+      console.error('Ошибка многосценарного анализа:', error);
+      // Fallback на простую упаковку
+      return this.fallbackPack(vehicle, items);
+    }
+  }
+
+  private getRiskEmoji(risk: 'low' | 'medium' | 'high'): string {
+    switch (risk) {
+      case 'low': return '🟢';
+      case 'medium': return '🟡';
+      case 'high': return '🔴';
+      default: return '⚪';
+    }
+  }
+
+  // Fallback метод при ошибке
+  private async fallbackPack(vehicle: Vehicle, items: DuctItem[]): Promise<PackResult> {
     const optimizedItems = this.optimizeWithNesting(items);
-    
-    // Рассчитываем метрики
     const totalWeight = optimizedItems.reduce((sum, item) => sum + (item.weightKg * item.qty), 0);
     const utilization = vehicle.maxPayloadKg ? (totalWeight / vehicle.maxPayloadKg) * 100 : 0;
-    
-    // Рассчитываем объемную эффективность
-    const vehicleVolume = vehicle.width * vehicle.height * vehicle.length;
-    const itemsVolume = optimizedItems.reduce((sum, item) => sum + this.calculateVolume(item) * item.qty, 0);
-    const volumeUtilization = (itemsVolume / vehicleVolume) * 100;
-    
-    // Создаем сообщение с деталями оптимизации
-    const originalCount = items.reduce((sum, item) => sum + item.qty, 0);
-    const optimizedCount = optimizedItems.reduce((sum, item) => sum + item.qty, 0);
-    const spaceSaved = originalCount - optimizedCount;
-    
-    // Анализ правил укладки
-    const safetyAnalysis = this.analyzeSafetyRules(optimizedItems, vehicle);
-    
-    let message = `Упаковка завершена:
-• ${originalCount} воздуховодов → ${optimizedCount} позиций
-• Экономия места: ${spaceSaved} позиций благодаря матрешке
-• Вес: ${totalWeight.toFixed(1)} кг (${utilization.toFixed(1)}% от грузоподъемности)
-• Объем: ${volumeUtilization.toFixed(1)}% от кузова
-• Правила безопасности: ${safetyAnalysis.status}`;
-
-    if (spaceSaved > 0) {
-      message += `\n🎯 Матрешка: ${spaceSaved} воздуховодов вложено в другие!`;
-    }
-    
-    if (safetyAnalysis.warnings.length > 0) {
-      message += `\n⚠️ Предупреждения: ${safetyAnalysis.warnings.join(', ')}`;
-    }
-    
-    if (safetyAnalysis.recommendations.length > 0) {
-      message += `\n💡 Рекомендации: ${safetyAnalysis.recommendations.join(', ')}`;
-    }
     
     return {
       success: true,
       items: optimizedItems,
       vehicle,
       totalWeight,
-      utilization: Math.max(utilization, volumeUtilization), // Используем максимальную утилизацию
-      message
+      utilization,
+      message: 'Упаковка выполнена в базовом режиме (многосценарный анализ недоступен)'
     };
   }
 

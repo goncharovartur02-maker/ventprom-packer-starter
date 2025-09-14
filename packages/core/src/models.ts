@@ -35,6 +35,9 @@ export interface DuctItem {
   length: MM;
   qty: number;
   weightKg?: number;
+  flangeType?: 'TDC' | 'SHINA_20' | 'SHINA_30' | 'REYКА' | 'NONE'; // Тип фланца
+  material?: 'galvanized' | 'stainless' | 'black_steel' | 'aluminum'; // Материал
+  thickness?: number; // толщина стенки в мм
 }
 
 export interface Placement {

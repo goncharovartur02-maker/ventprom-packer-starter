@@ -1,5 +1,6 @@
 import { Vehicle, DuctItem, Placement, PackResult, MM } from '../models';
 import { fitsWithin, collide } from '../constraints';
+import { FlangeRules } from '../flange-rules';
 
 interface PackingState {
   placements: Placement[];
@@ -11,6 +12,11 @@ interface PackingState {
 export class BeamSearch {
   private readonly BEAM_WIDTH = 5; // k=5 as specified
   private readonly GRID_SIZE: MM = 5;
+  private flangeRules: FlangeRules;
+
+  constructor() {
+    this.flangeRules = new FlangeRules();
+  }
 
   search(vehicle: Vehicle, items: DuctItem[], gridSize: MM): PackResult {
     const initialState: PackingState = {
@@ -31,10 +37,11 @@ export class BeamSearch {
         if (!nextItem) continue;
         
         // Try to place the item in different positions
-        const possiblePlacements = this.findPossiblePlacements(vehicle, nextItem, state.placements, gridSize);
+        const placedItems = this.getPlacedItems(items, state);
+        const possiblePlacements = this.findPossiblePlacements(vehicle, nextItem, state.placements, placedItems, gridSize);
         
         for (const placement of possiblePlacements) {
-          const newState = this.createNewState(state, placement, nextItem);
+          const newState = this.createNewState(items, state, placement, nextItem);
           newBeam.push(newState);
         }
         
@@ -42,7 +49,7 @@ export class BeamSearch {
         if (state.placements.length > 0) {
           const newBinPlacement = this.findPlacementInNewBin(vehicle, nextItem, gridSize);
           if (newBinPlacement) {
-            const newState = this.createNewStateWithNewBin(state, newBinPlacement, nextItem);
+            const newState = this.createNewStateWithNewBin(items, state, newBinPlacement, nextItem);
             newBeam.push(newState);
           }
         }
@@ -65,6 +72,7 @@ export class BeamSearch {
     vehicle: Vehicle, 
     item: DuctItem, 
     existingPlacements: Placement[], 
+    existingItems: DuctItem[],
     gridSize: MM
   ): Placement[] {
     const placements: Placement[] = [];
@@ -89,7 +97,8 @@ export class BeamSearch {
             };
             
             if (fitsWithin(vehicle, placement, w, h, l) && 
-                !this.hasCollision(placement, w, h, l, existingPlacements)) {
+                !this.hasCollision(placement, w, h, l, existingPlacements) &&
+                this.checkFlangeConstraints(item, placement, existingItems, existingPlacements)) {
               placements.push(placement);
             }
           }
@@ -127,13 +136,14 @@ export class BeamSearch {
   }
 
   private createNewState(
+    allItems: DuctItem[],
     currentState: PackingState, 
     placement: Placement, 
     item: DuctItem
   ): PackingState {
     const newPlacements = [...currentState.placements, placement];
     const newRemainingItems = currentState.remainingItems.slice(1);
-    const newScore = this.calculateScore(newPlacements, newRemainingItems);
+    const newScore = this.calculateScore(allItems, newPlacements, newRemainingItems);
     
     return {
       placements: newPlacements,
@@ -144,13 +154,14 @@ export class BeamSearch {
   }
 
   private createNewStateWithNewBin(
+    allItems: DuctItem[],
     currentState: PackingState, 
     placement: Placement, 
     item: DuctItem
   ): PackingState {
     const newPlacements = [...currentState.placements, placement];
     const newRemainingItems = currentState.remainingItems.slice(1);
-    const newScore = this.calculateScore(newPlacements, newRemainingItems);
+    const newScore = this.calculateScore(allItems, newPlacements, newRemainingItems);
     
     return {
       placements: newPlacements,
@@ -166,13 +177,14 @@ export class BeamSearch {
       .slice(0, count);
   }
 
-  private calculateScore(placements: Placement[], remainingItems: DuctItem[]): number {
+  private calculateScore(allItems: DuctItem[], placements: Placement[], remainingItems: DuctItem[]): number {
     // Higher score = better packing
     const volumeUtilization = this.calculateVolumeUtilization(placements);
     const stabilityScore = this.calculateStabilityScore(placements);
+    const flangeScore = this.calculateFlangeScore(allItems, placements);
     const remainingPenalty = remainingItems.length * 1000; // Penalty for unplaced items
     
-    return volumeUtilization * 100 + stabilityScore * 50 - remainingPenalty;
+    return volumeUtilization * 100 + stabilityScore * 50 + flangeScore * 30 - remainingPenalty;
   }
 
   private calculateVolumeUtilization(placements: Placement[]): number {
@@ -271,6 +283,79 @@ export class BeamSearch {
     
     return {
       volumeFill: usedVolume / vehicleVolume,
+    };
+  }
+
+  /**
+   * Получает элементы, которые уже размещены в текущем состоянии
+   */
+  private getPlacedItems(allItems: DuctItem[], state: PackingState): DuctItem[] {
+    const remainingIds = new Set(state.remainingItems.map(item => item.id));
+    return allItems.filter(item => !remainingIds.has(item.id));
+  }
+
+  /**
+   * Проверяет ограничения фланцев для нового размещения
+   */
+  private checkFlangeConstraints(
+    newItem: DuctItem,
+    newPlacement: Placement,
+    existingItems: DuctItem[],
+    existingPlacements: Placement[]
+  ): boolean {
+    // Проверяем правила фланцев с каждым существующим элементом
+    return this.flangeRules.canPlaceNear(newItem, newPlacement, existingItems, existingPlacements);
+  }
+
+  /**
+   * Рассчитывает оценку качества размещения с учетом фланцев
+   */
+  private calculateFlangeScore(items: DuctItem[], placements: Placement[]): number {
+    if (placements.length < 2) return 1; // Максимальная оценка для одного элемента
+
+    // Создаем карту для быстрого поиска элементов по ID
+    const itemMap = new Map<string, DuctItem>();
+    items.forEach(item => itemMap.set(item.id, item));
+
+    let totalScore = 0;
+    let pairCount = 0;
+
+    // Проверяем все пары размещений
+    for (let i = 0; i < placements.length; i++) {
+      for (let j = i + 1; j < placements.length; j++) {
+        const item1 = itemMap.get(placements[i].itemId);
+        const item2 = itemMap.get(placements[j].itemId);
+
+        if (!item1 || !item2) continue;
+
+        // Проверяем соблюдение минимальных расстояний
+        const meetsMinDistance = this.flangeRules.checkMinDistance(
+          item1, item2, placements[i], placements[j]
+        );
+
+        // Оценка: 1 - если соблюдены ограничения, 0 - если нарушены
+        totalScore += meetsMinDistance ? 1 : 0;
+        pairCount++;
+      }
+    }
+
+    return pairCount > 0 ? totalScore / pairCount : 1;
+  }
+
+  /**
+   * Валидирует финальное размещение с учетом всех фланцевых ограничений
+   */
+  private validateFinalPlacement(items: DuctItem[], placements: Placement[]): {
+    isValid: boolean;
+    flangeViolations: number;
+    warnings: string[];
+  } {
+    const validation = this.flangeRules.validatePlacementConfiguration(items, placements);
+    
+    return {
+      isValid: validation.isValid,
+      flangeViolations: validation.violations.length,
+      warnings: validation.recommendations
     };
   }
 }
