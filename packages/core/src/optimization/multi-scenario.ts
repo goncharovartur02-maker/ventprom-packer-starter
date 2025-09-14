@@ -1,4 +1,4 @@
-import { Vehicle, DuctItem, Placement, PackResult } from '../models';
+import { Vehicle, DuctItem, Placement, PackingResult } from '../models';
 import { BeamSearch } from '../heuristics/beam';
 import { LayerRules } from '../heuristics/layer_rules';
 import { FlangeRules } from '../flange-rules';
@@ -18,7 +18,7 @@ export interface ScenarioConfig {
 
 export interface ScenarioResult {
   config: ScenarioConfig;
-  packResult: PackResult;
+  packResult: PackingResult;
   metrics: {
     vehiclesUsed: number;
     totalWeight: number;
@@ -219,7 +219,7 @@ export class MultiScenarioOptimizer {
     vehicle: Vehicle,
     items: DuctItem[],
     config: ScenarioConfig
-  ): Promise<PackResult> {
+  ): Promise<PackingResult> {
     // Используем стандартный BeamSearch
     return this.beamSearch.search(vehicle, items, 5);
   }
@@ -246,7 +246,7 @@ export class MultiScenarioOptimizer {
    * Рассчитывает все метрики для результата упаковки
    */
   private calculateMetrics(
-    packResult: PackResult,
+    packResult: PackingResult,
     vehicle: Vehicle,
     items: DuctItem[]
   ): ScenarioResult['metrics'] {
@@ -472,7 +472,7 @@ export class MultiScenarioOptimizer {
   }
 
   private analyzeResult(
-    packResult: PackResult,
+    packResult: PackingResult,
     metrics: ScenarioResult['metrics'],
     config: ScenarioConfig
   ): { warnings: string[]; recommendations: string[] } {

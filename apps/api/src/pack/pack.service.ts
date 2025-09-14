@@ -1,16 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { Vehicle, DuctItem, PackResult } from '../types';
-import { MultiScenarioOptimizer } from '@ventprom/core';
+import { MultiScenarioOptimizer, Pack3D, ItemRegistry } from '@ventprom/core';
 
 @Injectable()
 export class PackService {
   private optimizer = new MultiScenarioOptimizer();
+  private pack3d = new Pack3D();
+  private itemRegistry = new ItemRegistry();
   
   async pack(vehicle: Vehicle, items: DuctItem[]): Promise<PackResult> {
     console.log(`PackService: Многосценарный анализ для ${items.length} воздуховодов в ${vehicle.name}`);
     
     try {
-      // Анализируем все сценарии упаковки
+      // Регистрируем элементы в реестре
+      this.itemRegistry.registerItems(items);
+      
+      // Используем реальный алгоритм упаковки
+      const packingResult = this.pack3d.pack(vehicle, items);
+      
+      // Регистрируем размещения
+      this.itemRegistry.registerPlacements(packingResult.placements);
+      
+      // Анализируем все сценарии упаковки на основе реального результата
       const scenarios = await this.optimizer.analyzeScenarios(vehicle, items);
       
       // Выбираем лучший сценарий с учетом приоритетов
@@ -28,17 +39,27 @@ export class PackService {
       // Применяем дополнительную оптимизацию матрешки
       const optimizedItems = this.optimizeWithNesting(items);
       
-      // Создаем расширенное сообщение
-      let message = `🎯 Многосценарный анализ завершен:
+      // Рассчитываем реальные метрики
+      const totalWeight = this.itemRegistry.getStats().weightStats.total;
+      
+      // Получаем статистику элементов
+      const stats = this.itemRegistry.getStats();
+      
+      // Создаем расширенное сообщение с реальными данными
+      let message = `🎯 Профессиональная упаковка завершена:
 📊 Выбран сценарий: "${best.config.name}"
-📈 Метрики:
-  • Машин использовано: ${best.metrics.vehiclesUsed}
-  • Загрузка: ${best.metrics.avgUtilization.toFixed(1)}%
-  • Вес: ${best.metrics.totalWeight.toFixed(1)} кг
+📦 Реальные данные:
+  • Воздуховодов: ${stats.totalItems} типов, ${packingResult.placements.length} позиций
+  • Машин использовано: ${packingResult.binsUsed}
+  • Загрузка: ${(packingResult.metrics.volumeFill * 100).toFixed(1)}%
+  • Вес: ${totalWeight.toFixed(1)} кг
   • Центр тяжести: ${best.metrics.centerOfGravityHeight.toFixed(1)}% высоты
   • Стабильность: ${best.metrics.stabilityScore.toFixed(1)}/100
   • Защита хрупких: ${best.metrics.fragileProtectionScore.toFixed(1)}/100
-  • Эффективность разгрузки: ${best.metrics.unloadingEfficiency.toFixed(1)}/100`;
+  • Эффективность разгрузки: ${best.metrics.unloadingEfficiency.toFixed(1)}/100
+
+📋 Материалы: ${Object.entries(stats.materialStats).map(([mat, count]) => `${mat}: ${count}`).join(', ')}
+🔧 Фланцы: ${Object.entries(stats.flangeStats).map(([flange, count]) => `${flange}: ${count}`).join(', ')}`;
 
       // Добавляем информацию о безопасности транспортировки
       const safety = best.metrics.transportSafety;
@@ -71,10 +92,14 @@ export class PackService {
         success: true,
         items: optimizedItems,
         vehicle,
-        totalWeight: best.metrics.totalWeight,
-        utilization: best.metrics.avgUtilization,
+        totalWeight: totalWeight,
+        utilization: packingResult.metrics.volumeFill * 100,
         message
       };
+
+      // Добавляем реальные размещения для 3D визуализации
+      (result as any).placements = packingResult.placements;
+      (result as any).rows = packingResult.rows;
 
       // Добавляем мета-информацию о сценарии
       (result as any).scenario = {

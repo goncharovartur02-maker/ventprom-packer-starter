@@ -7,6 +7,8 @@ export * from './heuristics/greedy';
 export * from './heuristics/multistart';
 export * from './heuristics/layer_rules';
 export * from './flange-rules';
+export * from './stability-analyzer';
+export * from './item-registry';
 export * from './optimization/multi-scenario';
 
 

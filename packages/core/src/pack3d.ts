@@ -1,10 +1,11 @@
-import { PackRequest, PackResult, Vehicle, DuctItem, Placement, MM } from './models';
+import { PackRequest, PackResult, PackingResult, Vehicle, DuctItem, Placement, MM } from './models';
 import { fitsWithin, collide } from './constraints';
 import { BeamSearch } from './heuristics/beam';
 import { LayerRules } from './heuristics/layer_rules';
 import { FlangeRules } from './flange-rules';
 import { MultiScenarioOptimizer, ScenarioResult } from './optimization/multi-scenario';
 import { StabilityAnalyzer, StabilityReport } from './stability-analyzer';
+import { ItemRegistry } from './item-registry';
 
 export class Pack3D {
   private readonly GRID_SIZE: MM = 5; // 5mm grid
@@ -13,6 +14,7 @@ export class Pack3D {
   private flangeRules: FlangeRules;
   private scenarioOptimizer: MultiScenarioOptimizer;
   private stabilityAnalyzer: StabilityAnalyzer;
+  private itemRegistry = new ItemRegistry();
 
   constructor() {
     this.beamSearch = new BeamSearch();
@@ -22,8 +24,11 @@ export class Pack3D {
     this.stabilityAnalyzer = new StabilityAnalyzer();
   }
 
-  pack(vehicle: Vehicle, items: DuctItem[]): PackResult {
+  pack(vehicle: Vehicle, items: DuctItem[]): PackingResult {
     console.log('Pack3D: Начинаем упаковку с профессиональными правилами для воздуховодов');
+    
+    // Регистрируем элементы для правильных расчетов
+    this.itemRegistry.registerItems(items);
     
     // Expand items by quantity
     const expandedItems = this.expandItems(items);
@@ -84,7 +89,7 @@ export class Pack3D {
   }
 
   // Basic FFD (First Fit Decreasing) algorithm
-  packBasic(vehicle: Vehicle, items: DuctItem[]): PackResult {
+  packBasic(vehicle: Vehicle, items: DuctItem[]): PackingResult {
     const expandedItems = this.expandItems(items);
     const sortedItems = this.layerRules.sortForLayering(expandedItems);
     
@@ -211,9 +216,7 @@ export class Pack3D {
   }
 
   private getItemDimensions(placement: Placement): { w: MM; h: MM; l: MM } {
-    // This would need to be implemented based on the original item data
-    // For now, return default dimensions
-    return { w: 100, h: 100, l: 100 };
+    return this.itemRegistry.getItemDimensions(placement);
   }
 
   private organizeByRows(placements: Placement[]): Record<number, Placement[]> {
@@ -230,7 +233,7 @@ export class Pack3D {
     return rows;
   }
 
-  private calculateMetrics(vehicle: Vehicle, placements: Placement[]): PackResult['metrics'] {
+  private calculateMetrics(vehicle: Vehicle, placements: Placement[]): PackingResult['metrics'] {
     const vehicleVolume = vehicle.width * vehicle.height * vehicle.length;
     let usedVolume = 0;
     
@@ -468,7 +471,7 @@ export class Pack3D {
           name: 'Стандартная упаковка',
           description: 'Fallback к стандартному алгоритму',
           packResult: fallbackResult,
-          metrics: this.createFallbackMetrics(fallbackResult, vehicle),
+          metrics: this.createFallbackMetrics(fallbackResult, vehicle, items),
           priority: 'efficiency',
           score: 75,
           warnings: ['Многосценарная оптимизация недоступна'],
@@ -549,10 +552,10 @@ export class Pack3D {
     return recommendation;
   }
 
-  private createFallbackMetrics(packResult: PackResult, vehicle: Vehicle): any {
-    const totalWeight = packResult.items.reduce((sum, item) => sum + (item.weightKg || 0) * item.qty, 0);
+  private createFallbackMetrics(packResult: PackingResult, vehicle: Vehicle, items: DuctItem[]): any {
+    const totalWeight = items.reduce((sum, item) => sum + (item.weightKg || 0) * item.qty, 0);
     const vehicleVolume = vehicle.width * vehicle.height * vehicle.length;
-    const usedVolume = packResult.items.reduce((sum, item) => {
+    const usedVolume = items.reduce((sum, item) => {
       const itemVolume = (item.w || item.d || 100) * (item.h || item.d || 100) * item.length;
       return sum + itemVolume * item.qty;
     }, 0);
@@ -566,8 +569,8 @@ export class Pack3D {
         centerOfGravityHeight: 400
       },
       spaceUtilization: (usedVolume / vehicleVolume) * 100,
-      loadingTime: packResult.items.length * 2,
-      unloadingTime: packResult.items.length * 1.5,
+      loadingTime: items.length * 2,
+      unloadingTime: items.length * 1.5,
       safetyScore: 80,
       costEfficiency: 75,
       flangeCompliance: 85
@@ -742,7 +745,7 @@ export class Pack3D {
 
   // Упаковка с анализом стабильности
   packWithStabilityAnalysis(vehicle: Vehicle, items: DuctItem[]): {
-    packResult: PackResult;
+    packResult: PackingResult;
     stabilityReport: StabilityReport;
     recommendation: string;
   } {
@@ -823,7 +826,7 @@ export class Pack3D {
     };
   }
 
-  private generateStabilityRecommendation(packResult: PackResult, stabilityReport: StabilityReport): string {
+  private generateStabilityRecommendation(packResult: PackingResult, stabilityReport: StabilityReport): string {
     let recommendation = `🛡️ АНАЛИЗ СТАБИЛЬНОСТИ ТРАНСПОРТА\n\n`;
     
     recommendation += `📊 Общая оценка: ${stabilityReport.overallRating.toUpperCase()}\n`;
@@ -896,7 +899,7 @@ export class Pack3D {
 }
 
 // Legacy function for backward compatibility
-export function pack3d(req: PackRequest): PackResult {
+export function pack3d(req: PackRequest): PackingResult {
   const packer = new Pack3D();
   return packer.pack(req.vehicle, req.items);
 }

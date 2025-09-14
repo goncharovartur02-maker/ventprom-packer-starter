@@ -48,7 +48,9 @@ export interface Placement {
 }
 
 export interface PackRequest { vehicle: Vehicle; items: DuctItem[]; }
-export interface PackResult {
+
+// Результат алгоритма упаковки (внутренний)
+export interface PackingResult {
   placements: Placement[];
   binsUsed: number;
   rows: Record<number, Placement[]>;
@@ -58,4 +60,14 @@ export interface PackResult {
     stabilityScore?: number;
   };
   snapshots: string[];
+}
+
+// API результат упаковки (внешний)
+export interface PackResult {
+  success: boolean;
+  items: DuctItem[];
+  vehicle: Vehicle;
+  totalWeight: number;
+  utilization: number;
+  message?: string;
 }

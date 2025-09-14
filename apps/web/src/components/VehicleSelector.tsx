@@ -1,14 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-interface Vehicle {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  length: number;
-  maxPayloadKg: number;
-}
+import type { Vehicle } from '@ventprom/core';
 
 interface VehicleSelectorProps {
   onSelect: (vehicle: Vehicle) => void;

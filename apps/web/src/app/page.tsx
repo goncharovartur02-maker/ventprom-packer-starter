@@ -4,36 +4,14 @@ import { useState } from 'react';
 import FileUpload from '@/components/FileUpload';
 import VehicleSelector from '@/components/VehicleSelector';
 import PackingResults from '@/components/PackingResults';
-// Временно используем локальные типы
-interface UniversalItem {
-  id: string;
-  type: string;
-  dimensions: { [key: string]: number };
-  qty: number;
-  weightKg: number;
-}
-
-interface Vehicle {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  length: number;
-  maxPayloadKg: number;
-}
-
-interface PackResult {
-  success: boolean;
-  items: UniversalItem[];
-  vehicle: Vehicle;
-  totalWeight: number;
-  utilization: number;
-  message?: string;
-}
+import ScenarioSelector, { ScenarioResults } from '@/components/ScenarioSelector';
+// Используем типы из core пакета
+import type { UniversalItem, Vehicle, PackResult } from '@ventprom/core';
 
 export default function Home() {
   const [items, setItems] = useState<UniversalItem[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<string>('balanced');
   const [packResult, setPackResult] = useState<PackResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -275,6 +253,11 @@ export default function Home() {
               />
             </div>
 
+            {/* Scenario Selection Card */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]">
+              <ScenarioSelector onSelect={setSelectedScenario} />
+            </div>
+
             {/* Actions Card */}
             <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]">
               <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
@@ -330,7 +313,13 @@ export default function Home() {
               📊 Результаты
             </h2>
             {packResult ? (
-              <PackingResults result={packResult} />
+              <>
+                <PackingResults result={packResult} />
+                {/* Показываем результаты сценарного анализа если доступны */}
+                {(packResult as any).scenario && (
+                  <ScenarioResults scenarioData={(packResult as any).scenario} />
+                )}
+              </>
             ) : (
               <div className="text-center text-white/70 py-16">
                 {loading ? (

@@ -1,4 +1,4 @@
-import { Vehicle, DuctItem, PackResult } from '../models';
+import { Vehicle, DuctItem, PackingResult } from '../models';
 import { BeamSearch } from './beam';
 import { LayerRules } from './layer_rules';
 
@@ -12,8 +12,8 @@ export class Multistart {
     this.layerRules = new LayerRules();
   }
 
-  search(vehicle: Vehicle, items: DuctItem[], gridSize: number): PackResult {
-    const results: PackResult[] = [];
+  search(vehicle: Vehicle, items: DuctItem[], gridSize: number): PackingResult {
+    const results: PackingResult[] = [];
     
     // Generate multiple starting configurations
     for (let i = 0; i < this.NUM_STARTS; i++) {
@@ -40,7 +40,7 @@ export class Multistart {
     return this.layerRules.sortForLayering(shuffled);
   }
 
-  private selectBestResult(results: PackResult[]): PackResult {
+  private selectBestResult(results: PackingResult[]): PackingResult {
     return results.reduce((best, current) => {
       const bestScore = this.calculateResultScore(best);
       const currentScore = this.calculateResultScore(current);
@@ -49,7 +49,7 @@ export class Multistart {
     });
   }
 
-  private calculateResultScore(result: PackResult): number {
+  private calculateResultScore(result: PackingResult): number {
     // Higher score = better result
     const volumeScore = result.metrics.volumeFill * 100;
     const binsPenalty = result.binsUsed * 10; // Penalty for using more bins

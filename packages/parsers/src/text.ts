@@ -1,4 +1,4 @@
-import { DuctItem } from '../../core/src';
+import { DuctItem } from '@ventprom/core';
 
 export class TextParser {
   private columnMappings = {

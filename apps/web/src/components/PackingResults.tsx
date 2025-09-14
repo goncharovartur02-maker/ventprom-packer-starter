@@ -1,15 +1,7 @@
 'use client';
 
 import ThreeDViewer from './ThreeDViewer';
-
-interface PackResult {
-  success: boolean;
-  items: any[];
-  vehicle: any;
-  totalWeight: number;
-  utilization: number;
-  message?: string;
-}
+import type { PackResult } from '@ventprom/core';
 
 interface PackingResultsProps {
   result: PackResult;
@@ -26,38 +18,46 @@ export default function PackingResults({ result }: PackingResultsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
+      {/* Modern Summary Stats with Glassmorphism */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Items Packed</h3>
-          <p className="text-2xl font-bold text-blue-600">{result.items.length}</p>
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6 shadow-lg hover:bg-white/15 transition-all duration-300">
+          <h3 className="font-semibold text-white/80 text-sm">📦 Элементов упаковано</h3>
+          <p className="text-3xl font-bold text-blue-400 mt-2">{result.items.length}</p>
         </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Total Weight</h3>
-          <p className="text-2xl font-bold text-green-600">{result.totalWeight.toFixed(1)} kg</p>
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6 shadow-lg hover:bg-white/15 transition-all duration-300">
+          <h3 className="font-semibold text-white/80 text-sm">⚖️ Общий вес</h3>
+          <p className="text-3xl font-bold text-green-400 mt-2">{result.totalWeight.toFixed(1)} кг</p>
         </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Vehicle</h3>
-          <p className="text-2xl font-bold text-purple-600">{result.vehicle.name}</p>
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6 shadow-lg hover:bg-white/15 transition-all duration-300">
+          <h3 className="font-semibold text-white/80 text-sm">🚚 Транспорт</h3>
+          <p className="text-2xl font-bold text-purple-400 mt-2">{result.vehicle.name}</p>
         </div>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Utilization</h3>
-          <p className="text-2xl font-bold text-orange-600">{result.utilization.toFixed(1)}%</p>
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl border border-white/20 p-6 shadow-lg hover:bg-white/15 transition-all duration-300">
+          <h3 className="font-semibold text-white/80 text-sm">📊 Загрузка</h3>
+          <p className="text-3xl font-bold text-orange-400 mt-2">{result.utilization.toFixed(1)}%</p>
         </div>
       </div>
 
-      {/* 3D Viewer */}
-      <div className="bg-gray-100 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 mb-4">3D Visualization</h3>
-        <div className="h-96">
+      {/* Modern 3D Viewer */}
+      <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-6 shadow-2xl">
+        <h3 className="font-bold text-white mb-4 text-xl flex items-center">
+          🎨 3D Визуализация
+          <span className="ml-auto text-sm text-white/60 font-normal">Интерактивный просмотр</span>
+        </h3>
+        <div className="h-96 rounded-2xl overflow-hidden border border-white/10">
           <ThreeDViewer result={result} />
         </div>
       </div>
 
-      {/* Message */}
+      {/* Modern Message Display */}
       {result.message && (
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-blue-800">{result.message}</p>
+        <div className="backdrop-blur-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-3xl border border-blue-400/30 p-6 shadow-lg">
+          <h3 className="font-bold text-white mb-3 flex items-center">
+            📋 Детальный отчет
+          </h3>
+          <pre className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-xl border border-white/10 overflow-x-auto">
+            {result.message}
+          </pre>
         </div>
       )}
     </div>

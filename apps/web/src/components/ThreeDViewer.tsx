@@ -3,35 +3,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-interface Placement {
-  x: number;
-  y: number;
-  z: number;
-  rot: [number, number, number];
-  item?: any;
-}
-
-interface DuctItem {
-  id: string;
-  type: 'rect' | 'round';
-  w?: number;
-  h?: number;
-  d?: number;
-  length: number;
-  qty: number;
-  weightKg?: number;
-  flangeType?: string;
-}
-
-interface PackResult {
-  success: boolean;
-  items: DuctItem[];
-  vehicle: any;
-  placements?: Placement[];
-  utilization?: number;
-  message?: string;
-}
+import type { PackResult, DuctItem, Placement, Vehicle } from '@ventprom/core';
 
 interface ThreeDViewerProps {
   result: PackResult;

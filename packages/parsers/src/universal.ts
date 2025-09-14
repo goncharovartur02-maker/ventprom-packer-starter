@@ -1,4 +1,4 @@
-import { UniversalItem, DuctItem } from '../../core/src';
+import { UniversalItem, DuctItem } from '@ventprom/core';
 
 export class UniversalParser {
   private columnMappings = {
@@ -66,15 +66,27 @@ export class UniversalParser {
   }
 
   private async extractFromPdf(buffer: Buffer): Promise<string> {
-    // This would use pdf-parse to extract all text content
-    // For now, return a placeholder
-    return 'PDF content extraction not implemented yet';
+    try {
+      const pdfParse = require('pdf-parse');
+      const data = await pdfParse(buffer);
+      return data.text;
+    } catch (error) {
+      console.error('PDF extraction failed:', error);
+      return 'PDF content extraction failed';
+    }
   }
 
   private async extractFromImage(buffer: Buffer): Promise<string> {
-    // This would use Tesseract.js to extract all text content
-    // For now, return a placeholder
-    return 'Image content extraction not implemented yet';
+    try {
+      const Tesseract = require('tesseract.js');
+      const { data: { text } } = await Tesseract.recognize(buffer, 'rus+eng', {
+        logger: m => console.log(m)
+      });
+      return text;
+    } catch (error) {
+      console.error('Image OCR failed:', error);
+      return 'Image content extraction failed';
+    }
   }
 
   private parseText(text: string): UniversalItem[] {

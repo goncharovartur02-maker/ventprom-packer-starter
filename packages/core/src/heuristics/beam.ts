@@ -1,6 +1,7 @@
-import { Vehicle, DuctItem, Placement, PackResult, MM } from '../models';
+import { Vehicle, DuctItem, Placement, PackingResult, MM } from '../models';
 import { fitsWithin, collide } from '../constraints';
 import { FlangeRules } from '../flange-rules';
+import { ItemRegistry } from '../item-registry';
 
 interface PackingState {
   placements: Placement[];
@@ -13,12 +14,16 @@ export class BeamSearch {
   private readonly BEAM_WIDTH = 5; // k=5 as specified
   private readonly GRID_SIZE: MM = 5;
   private flangeRules: FlangeRules;
+  private itemRegistry = new ItemRegistry();
 
   constructor() {
     this.flangeRules = new FlangeRules();
   }
 
-  search(vehicle: Vehicle, items: DuctItem[], gridSize: MM): PackResult {
+  search(vehicle: Vehicle, items: DuctItem[], gridSize: MM): PackingResult {
+    // Регистрируем элементы для правильных расчетов
+    this.itemRegistry.registerItems(items);
+    
     const initialState: PackingState = {
       placements: [],
       remainingItems: [...items],
@@ -240,12 +245,10 @@ export class BeamSearch {
   }
 
   private getItemDimensions(placement: Placement): { w: MM; h: MM; l: MM } {
-    // This would need to be implemented based on the original item data
-    // For now, return default dimensions
-    return { w: 100, h: 100, l: 100 };
+    return this.itemRegistry.getItemDimensions(placement);
   }
 
-  private stateToPackResult(state: PackingState, vehicle: Vehicle): PackResult {
+  private stateToPackResult(state: PackingState, vehicle: Vehicle): PackingResult {
     const rows = this.organizeByRows(state.placements);
     const metrics = this.calculateMetrics(vehicle, state.placements);
     
@@ -272,7 +275,7 @@ export class BeamSearch {
     return rows;
   }
 
-  private calculateMetrics(vehicle: Vehicle, placements: Placement[]): PackResult['metrics'] {
+  private calculateMetrics(vehicle: Vehicle, placements: Placement[]): PackingResult['metrics'] {
     const vehicleVolume = vehicle.width * vehicle.height * vehicle.length;
     let usedVolume = 0;
     

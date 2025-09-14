@@ -1,5 +1,5 @@
 import pdfParse from 'pdf-parse';
-import { DuctItem } from '../../core/src/models';
+import { DuctItem } from '@ventprom/core';
 
 export class PdfParser {
   private ductMap: Map<string, DuctItem> = new Map(); // Для дедупликации
