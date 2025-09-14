@@ -9,31 +9,59 @@ services:
     environment:
       - NODE_ENV=development
       - HOST=0.0.0.0
+      - PORT=3001
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./apps/api/package.json:/app/apps/api/package.json:ro
       - ./packages/core/src:/app/packages/core/src
-      - ./packages/parsers/dist:/app/packages/parsers/dist
+      - ./packages/parsers/dist:/app/packages/parsers/dist:ro
       - /app/node_modules
-    command: sh -lc "npm run build && npm run start:dev"
+      - /app/apps/api/node_modules
+    command: sh -c "cd apps/api && npm run build && npm run start:dev"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ventprom_network
 
   web:
     build:
       context: .
       dockerfile: Dockerfile.dev
-      target: web
+      target: web_dev_stage
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
     volumes:
       - ./apps/web/src:/app/apps/web/src
       - ./apps/web/package.json:/app/apps/web/package.json:ro
-      - ./packages/core/src:/app/packages/core/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./apps/web/tailwind.config.js:/app/apps/web/tailwind.config.js:ro
+      - ./apps/web/next.config.js:/app/apps/web/next.config.js:ro
       - /app/node_modules
-    # Use CMD from Dockerfile (npm run dev)
+      - /app/apps/web/node_modules
+    command: sh -c "cd apps/web && npm run dev"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - ventprom_network
+
+networks:
+  ventprom_network:
+    driver: bridge

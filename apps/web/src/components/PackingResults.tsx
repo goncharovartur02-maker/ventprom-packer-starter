@@ -1,5 +1,7 @@
 'use client';
 
+import ThreeDViewer from './ThreeDViewer';
+
 interface PackResult {
   success: boolean;
   items: any[];
@@ -8,18 +10,19 @@ interface PackResult {
   utilization: number;
   message?: string;
 }
-import ThreeDViewer from './ThreeDViewer';
 
 interface PackingResultsProps {
   result: PackResult;
 }
 
 export default function PackingResults({ result }: PackingResultsProps) {
-  const totalItems = result.placements.length;
-  const volumeFill = (result.metrics.volumeFill * 100).toFixed(1);
-  const stabilityScore = result.metrics.stabilityScore 
-    ? (result.metrics.stabilityScore * 100).toFixed(1) 
-    : 'N/A';
+  if (!result.success) {
+    return (
+      <div className="text-red-600 p-4">
+        {result.message || 'Packing failed'}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -27,19 +30,19 @@ export default function PackingResults({ result }: PackingResultsProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="font-medium text-gray-900">Items Packed</h3>
-          <p className="text-2xl font-bold text-blue-600">{totalItems}</p>
+          <p className="text-2xl font-bold text-blue-600">{result.items.length}</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Bins Used</h3>
-          <p className="text-2xl font-bold text-green-600">{result.binsUsed}</p>
+          <h3 className="font-medium text-gray-900">Total Weight</h3>
+          <p className="text-2xl font-bold text-green-600">{result.totalWeight.toFixed(1)} kg</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Volume Fill</h3>
-          <p className="text-2xl font-bold text-purple-600">{volumeFill}%</p>
+          <h3 className="font-medium text-gray-900">Vehicle</h3>
+          <p className="text-2xl font-bold text-purple-600">{result.vehicle.name}</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="font-medium text-gray-900">Stability</h3>
-          <p className="text-2xl font-bold text-orange-600">{stabilityScore}%</p>
+          <h3 className="font-medium text-gray-900">Utilization</h3>
+          <p className="text-2xl font-bold text-orange-600">{result.utilization.toFixed(1)}%</p>
         </div>
       </div>
 
@@ -51,37 +54,10 @@ export default function PackingResults({ result }: PackingResultsProps) {
         </div>
       </div>
 
-      {/* Rows Summary */}
-      {Object.keys(result.rows).length > 0 && (
-        <div>
-          <h3 className="font-medium text-gray-900 mb-4">Rows Summary</h3>
-          <div className="space-y-2">
-            {Object.entries(result.rows).map(([rowIndex, placements]) => (
-              <div key={rowIndex} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <span className="font-medium">Row {rowIndex}</span>
-                <span className="text-sm text-gray-600">
-                  {placements.length} items
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Weight Distribution */}
-      {result.metrics.weightPerLayer && result.metrics.weightPerLayer.length > 0 && (
-        <div>
-          <h3 className="font-medium text-gray-900 mb-4">Weight Distribution</h3>
-          <div className="space-y-2">
-            {result.metrics.weightPerLayer.map((weight, index) => (
-              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <span className="font-medium">Layer {index}</span>
-                <span className="text-sm text-gray-600">
-                  {weight.toFixed(1)} kg
-                </span>
-              </div>
-            ))}
-          </div>
+      {/* Message */}
+      {result.message && (
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <p className="text-blue-800">{result.message}</p>
         </div>
       )}
     </div>

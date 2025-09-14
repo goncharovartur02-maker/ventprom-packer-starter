@@ -1,5 +1,5 @@
 import pdfParse from 'pdf-parse';
-import { DuctItem } from '../../core/src';
+import { DuctItem } from '../../core/src/models';
 
 export class PdfParser {
   async parse(buffer: Buffer): Promise<DuctItem[]> {
@@ -88,20 +88,16 @@ export class PdfParser {
       // Extract material info
       const material = this.extractMaterial(line);
       
+      const weight = this.calculateWeight(width, height, length, material);
+      
       const item: DuctItem = {
         id: `airduct_${lineIndex}`,
-        name: `Воздуховод ${width}x${height}-${length}`,
-        type: 'rect', // Fixed type to match DuctItem interface
-        dimensions: {
-          width: width,
-          height: height,
-          length: length
-        },
-        quantity: quantity,
-        material: material,
-        weight: this.calculateWeight(width, height, length, material),
-        volume: width * height * length / 1000000, // Convert to m³
-        originalText: line
+        type: 'rect',
+        w: width,
+        h: height,
+        length: length,
+        qty: quantity,
+        weightKg: weight
       };
       
       return item;

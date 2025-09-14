@@ -206,74 +206,117 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Wentprom калькулятор
-          </h1>
-          <p className="text-lg text-gray-600">
-            3D truck packing optimization for duct systems
-          </p>
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Animated background particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -inset-10 opacity-50">
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-1000"></div>
+          <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-500"></div>
+        </div>
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        {/* Modern header with glassmorphism */}
+        <header className="text-center mb-12">
+          <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent mb-4 animate-fade-in">
+              Wentprom калькулятор
+            </h1>
+            <p className="text-xl text-white/80 font-light">
+              🚚 3D упаковка воздуховодов для транспортных средств
+            </p>
+            <div className="flex justify-center mt-6 space-x-4">
+              <div className="flex items-center text-white/70">
+                <span className="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                Система активна
+              </div>
+            </div>
+          </div>
         </header>
 
+        {/* Modern error display */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
+          <div className="backdrop-blur-xl bg-red-500/20 border border-red-400/30 text-red-100 px-6 py-4 rounded-2xl mb-8 shadow-lg animate-slide-down">
+            <div className="flex items-center">
+              <span className="text-2xl mr-3">⚠️</span>
+              {error}
+            </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left column - Controls */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Left column - Modern glassmorphism controls */}
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Upload Files</h2>
+            {/* File Upload Card */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                📁 Загрузить файлы
+              </h2>
               <FileUpload onUpload={handleFileUpload} loading={loading} />
               {items.length > 0 && (
-                <div className="mt-4 text-sm text-gray-600">
-                  {items.length} items loaded
+                <div className="mt-6 p-4 bg-green-500/20 rounded-2xl border border-green-400/30">
+                  <div className="flex items-center text-green-200">
+                    <span className="text-2xl mr-3">✅</span>
+                    Загружено {items.length} воздуховодов
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Select Vehicle</h2>
+            {/* Vehicle Selection Card */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                🚛 Выбрать транспорт
+              </h2>
               <VehicleSelector
                 onSelect={setSelectedVehicle}
                 selected={selectedVehicle}
               />
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Actions</h2>
-              <div className="space-y-3">
+            {/* Actions Card */}
+            <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-[1.02]">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                ⚡ Действия
+              </h2>
+              <div className="space-y-4">
                 <button
                   onClick={handlePack}
                   disabled={!selectedVehicle || items.length === 0 || loading}
-                  className="btn btn-primary w-full"
+                  className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 disabled:scale-100 disabled:opacity-50 flex items-center justify-center"
                 >
-                  {loading ? 'Packing...' : 'Pack Items'}
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                      Упаковка...
+                    </>
+                  ) : (
+                    <>
+                      🎯 Упаковать предметы
+                    </>
+                  )}
                 </button>
 
                 {packResult && (
-                  <div className="space-y-2">
+                  <div className="space-y-3 pt-4 border-t border-white/20">
                     <button
                       onClick={handleExportPdf}
-                      className="btn btn-secondary w-full"
+                      className="w-full py-3 px-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center"
                     >
-                      Export PDF
+                      📄 Экспорт PDF
                     </button>
                     <button
                       onClick={handleExportGlb}
-                      className="btn btn-secondary w-full"
+                      className="w-full py-3 px-6 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center"
                     >
-                      Export GLB
+                      🎨 Экспорт 3D
                     </button>
                     <button
                       onClick={handleExportHtml}
-                      className="btn btn-secondary w-full"
+                      className="w-full py-3 px-6 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-700 hover:to-yellow-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center"
                     >
-                      Export HTML
+                      🌐 Экспорт HTML
                     </button>
                   </div>
                 )}
@@ -281,17 +324,26 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right column - Results */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Results</h2>
+          {/* Right column - Results with glassmorphism */}
+          <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl hover:bg-white/15 transition-all duration-300">
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+              📊 Результаты
+            </h2>
             {packResult ? (
               <PackingResults result={packResult} />
             ) : (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-white/70 py-16">
                 {loading ? (
-                  <div className="spinner"></div>
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white/70 mb-4"></div>
+                    <p className="text-lg">Обработка данных...</p>
+                  </div>
                 ) : (
-                  'Upload files and select a vehicle to see packing results'
+                  <div className="flex flex-col items-center">
+                    <div className="text-6xl mb-4 opacity-50">📦</div>
+                    <p className="text-lg">Загрузите файлы и выберите транспорт</p>
+                    <p className="text-sm text-white/50 mt-2">для просмотра результатов упаковки</p>
+                  </div>
                 )}
               </div>
             )}

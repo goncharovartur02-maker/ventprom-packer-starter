@@ -14,14 +14,39 @@ export class Pack3D {
   }
 
   pack(vehicle: Vehicle, items: DuctItem[]): PackResult {
+    console.log('Pack3D: Начинаем упаковку с профессиональными правилами для воздуховодов');
+    
     // Expand items by quantity
     const expandedItems = this.expandItems(items);
     
-    // Sort items by layer rules (big items at bottom)
-    const sortedItems = this.layerRules.sortForLayering(expandedItems);
+    // Optimize with nesting (матрешка)
+    const nestedItems = this.optimizeWithNesting(expandedItems);
+    
+    // Sort items by ventilation-specific layer rules
+    const sortedItems = this.layerRules.sortForVentilationLayering(nestedItems);
+    
+    // Group into layers with safety checks
+    const layers = this.layerRules.groupIntoVentilationLayers(sortedItems);
+    
+    // Validate packing configuration
+    const validation = this.layerRules.validatePackingConfiguration(layers, vehicle);
+    
+    if (!validation.isValid) {
+      console.error('Pack3D: Ошибки в конфигурации упаковки:', validation.errors);
+    }
+    
+    if (validation.warnings.length > 0) {
+      console.warn('Pack3D: Предупреждения:', validation.warnings);
+    }
     
     // Use beam search for optimal packing
     const result = this.beamSearch.search(vehicle, sortedItems, this.GRID_SIZE);
+    
+    // Add validation info to result
+    (result as any).validation = validation;
+    (result as any).layersCount = layers.length;
+    
+    console.log(`Pack3D: Упаковка завершена. Слоев: ${layers.length}, Предупреждений: ${validation.warnings.length}`);
     
     return result;
   }
@@ -201,6 +226,91 @@ export class Pack3D {
     return {
       volumeFill: usedVolume / vehicleVolume,
     };
+  }
+
+  // Матрешка алгоритм - проверка возможности вложения
+  private checkNesting(outer: DuctItem, inner: DuctItem): boolean {
+    // Проверка возможности вложения inner в outer
+    if (outer.type === 'round' && inner.type === 'round') {
+      const outerRadius = outer.d! / 2;
+      const innerRadius = inner.d! / 2;
+      const clearance = 10; // 10mm зазор
+      return innerRadius + clearance < outerRadius && inner.length <= outer.length;
+    }
+    
+    if (outer.type === 'rect' && inner.type === 'rect') {
+      const clearance = 10;
+      return inner.w! + clearance < outer.w! && 
+             inner.h! + clearance < outer.h! && 
+             inner.length <= outer.length;
+    }
+    
+    if (outer.type === 'rect' && inner.type === 'round') {
+      const clearance = 10;
+      const minDimension = Math.min(outer.w!, outer.h!);
+      return inner.d! + clearance < minDimension && inner.length <= outer.length;
+    }
+    
+    return false;
+  }
+
+  // Оптимизация упаковки с учетом вложенности (матрешка)
+  private optimizeWithNesting(items: DuctItem[]): DuctItem[] {
+    const nested: DuctItem[] = [];
+    const remaining: DuctItem[] = [...items];
+    
+    // Сортируем по размеру (большие первыми)
+    remaining.sort((a, b) => {
+      const volumeA = this.calculateVolume(a);
+      const volumeB = this.calculateVolume(b);
+      return volumeB - volumeA;
+    });
+    
+    for (let i = 0; i < remaining.length; i++) {
+      const outer = remaining[i];
+      const innerItems: DuctItem[] = [];
+      
+      for (let j = i + 1; j < remaining.length; j++) {
+        const inner = remaining[j];
+        if (this.checkNesting(outer, inner)) {
+          innerItems.push(inner);
+          remaining.splice(j, 1);
+          j--;
+        }
+      }
+      
+      if (innerItems.length > 0) {
+        // Создаем композитный элемент с вложенными воздуховодами
+        nested.push({
+          ...outer,
+          id: `nested_${outer.id}`,
+          weightKg: (outer.weightKg || 0) + innerItems.reduce((sum, item) => sum + (item.weightKg || 0), 0),
+          // Добавляем информацию о вложенных элементах
+          nestedItems: innerItems
+        } as DuctItem & { nestedItems: DuctItem[] });
+        
+        console.log(`Матрешка: ${outer.id} содержит ${innerItems.length} вложенных воздуховодов:`, 
+                   innerItems.map(item => item.id));
+      } else {
+        nested.push(outer);
+      }
+    }
+    
+    console.log(`Оптимизация матрешка: ${items.length} → ${nested.length} элементов 
+                (экономия ${items.length - nested.length} мест)`);
+    
+    return nested;
+  }
+
+  // Вспомогательный метод для расчета объема воздуховода
+  private calculateVolume(item: DuctItem): number {
+    if (item.type === 'round' && item.d) {
+      const radius = item.d / 2;
+      return Math.PI * radius * radius * item.length;
+    } else if (item.type === 'rect' && item.w && item.h) {
+      return item.w * item.h * item.length;
+    }
+    return 0;
   }
 }
 
